@@ -18,6 +18,6 @@ that the native renderer is fast enough to be worth building.
 - `examples/` example packages, fictitious data only
 - `tools/` helper scripts
 
-## Licence
+## License
 
 [MIT](LICENSE).
