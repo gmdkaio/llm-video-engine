@@ -1,0 +1,17 @@
+{
+  "name": "llm-video-engine",
+  "version-string": "0.0.0",
+  "dependencies": [
+    {
+      "name": "skia",
+      "default-features": false,
+      "features": [
+        "freetype",
+        "harfbuzz"
+      ]
+    },
+    "harfbuzz",
+    "nlohmann-json"
+  ],
+  "builtin-baseline": "e456309491fd875487bf02b8a0dca76c1b1b00cc"
+}

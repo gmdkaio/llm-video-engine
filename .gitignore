@@ -11,6 +11,7 @@ internal/
 themes/private/
 packages/private/
 golden/private/
+examples/hartbau.json
 *.mp4
 *.mp3
 
