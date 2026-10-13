@@ -1,0 +1,28 @@
+# Internal planning and notes. README.md and SKILL.md are the only public markdown files.
+*.md
+!/README.md
+!/SKILL.md
+internal/
+
+# Claude Code settings
+.claude/
+
+# Private theme packs and client material
+themes/private/
+packages/private/
+golden/private/
+*.mp4
+*.mp3
+
+# Build output
+build/
+out/
+vcpkg_installed/
+CMakeUserPresets.json
+
+# Editors and OS
+.vs/
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
