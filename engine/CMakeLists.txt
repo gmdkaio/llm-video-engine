@@ -15,6 +15,8 @@ add_executable(llm-video-engine
   src/render/text.cpp
   src/scenes/frame.cpp
   src/scenes/components.cpp
+  src/scenes/check.cpp
+  src/scenes/chart.cpp
   src/encode/pipe.cpp
 )
 target_include_directories(llm-video-engine PRIVATE src)

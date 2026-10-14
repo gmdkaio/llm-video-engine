@@ -395,6 +395,12 @@
           }
          }
         }
+       },
+       "zoom_max": {
+        "type": "number"
+       },
+       "back": {
+        "type": "boolean"
        }
       },
       "required": [
@@ -525,19 +531,7 @@
       "chips",
       "kv",
       "list",
-      "bars",
-      "lines",
-      "stackbar",
-      "ruler",
-      "meter",
-      "rings",
-      "gauge",
-      "flow",
-      "calendar",
-      "threshold",
-      "callout",
-      "bracket",
-      "note"
+      "chart"
      ]
     }
    },
@@ -747,14 +741,13 @@
      "if": {
       "properties": {
        "type": {
-        "const": "bars"
+        "const": "chart"
        }
       }
      },
      "then": {
       "required": [
-       "cats",
-       "values"
+       "layers"
       ],
       "additionalProperties": false,
       "properties": {
@@ -764,832 +757,680 @@
        "size": true,
        "grow": true,
        "float": true,
-       "cats": {
-        "$ref": "#/$defs/strings"
+       "x": {
+        "$ref": "#/$defs/axis"
        },
-       "values": {
-        "$ref": "#/$defs/numbers"
+       "y": {
+        "$ref": "#/$defs/axis"
        },
-       "highlight": {
-        "oneOf": [
-         {
-          "$ref": "#/$defs/indices"
-         },
-         {
-          "const": "last"
-         },
-         {
-          "type": "null"
-         }
-        ]
-       },
-       "projection": {
-        "$ref": "#/$defs/indices"
-       },
-       "ref": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-         "values"
-        ],
-        "properties": {
-         "values": {
-          "$ref": "#/$defs/numbers"
-         },
-         "at": {
-          "$ref": "#/$defs/at"
-         }
-        }
-       },
-       "labels": {
-        "type": "boolean"
-       },
-       "label_divide": {
-        "type": "number"
-       },
-       "label_decimals": {
-        "type": "integer"
-       },
-       "stack": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-         "values"
-        ],
-        "properties": {
-         "values": {
-          "$ref": "#/$defs/numbers"
-         },
-         "tone": {
-          "$ref": "#/$defs/tone"
-         },
-         "label": {
-          "type": "string"
-         },
-         "at": {
-          "$ref": "#/$defs/at"
-         }
-        }
-       },
-       "focus": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-         "idx"
-        ],
-        "properties": {
-         "idx": {
-          "type": "integer"
-         },
-         "at": {
-          "$ref": "#/$defs/at"
-         }
-        }
-       },
-       "split": {
-        "$ref": "#/$defs/split"
-       },
-       "axis": {
-        "type": "boolean"
-       },
-       "color": {
+       "orient": {
         "enum": [
-         "accent",
-         "neutral"
+         "vertical",
+         "horizontal"
         ]
        },
-       "y": {
-        "$ref": "#/$defs/y"
-       }
-      }
-     }
-    },
-    {
-     "if": {
-      "properties": {
-       "type": {
-        "const": "lines"
-       }
-      }
-     },
-     "then": {
-      "required": [
-       "cats",
-       "series"
-      ],
-      "additionalProperties": false,
-      "properties": {
-       "type": true,
-       "id": true,
-       "at": true,
-       "size": true,
-       "grow": true,
-       "float": true,
-       "cats": {
-        "$ref": "#/$defs/strings"
+       "coord": {
+        "enum": [
+         "cartesian",
+         "polar"
+        ]
        },
-       "series": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "additionalProperties": false,
-         "required": [
-          "values"
-         ],
-         "properties": {
-          "id": {
-           "type": "string"
-          },
-          "name": {
-           "type": "string"
-          },
-          "values": {
-           "$ref": "#/$defs/numbers"
-          },
-          "tone": {
-           "$ref": "#/$defs/tone"
-          }
-         }
-        }
-       },
-       "actual_until": {
-        "type": "integer"
-       },
-       "actual_label": {
-        "type": "string"
-       },
-       "split": {
-        "$ref": "#/$defs/split"
-       },
-       "zero": {
+       "polar": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-         "label": {
-          "type": "string"
-         },
-         "at": {
-          "$ref": "#/$defs/at"
-         }
-        }
-       },
-       "at_series": {
-        "$ref": "#/$defs/at"
-       },
-       "y": {
-        "$ref": "#/$defs/y"
-       }
-      }
-     }
-    },
-    {
-     "if": {
-      "properties": {
-       "type": {
-        "const": "stackbar"
-       }
-      }
-     },
-     "then": {
-      "required": [
-       "items"
-      ],
-      "additionalProperties": false,
-      "properties": {
-       "type": true,
-       "id": true,
-       "at": true,
-       "size": true,
-       "grow": true,
-       "float": true,
-       "items": {
-        "type": "array",
-        "items": {
-         "type": "array"
-        }
-       },
-       "max": {
-        "type": "number"
-       },
-       "target": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-         "value": {
+         "start": {
           "type": "number"
          },
-         "label": {
-          "type": "string"
-         }
-        }
-       },
-       "end_label": {
-        "type": "string"
-       },
-       "note": {
-        "type": "string"
-       },
-       "label_divide": {
-        "type": "number"
-       },
-       "label_decimals": {
-        "type": "integer"
-       }
-      }
-     }
-    },
-    {
-     "if": {
-      "properties": {
-       "type": {
-        "const": "ruler"
-       }
-      }
-     },
-     "then": {
-      "required": [
-       "rows"
-      ],
-      "additionalProperties": false,
-      "properties": {
-       "type": true,
-       "id": true,
-       "at": true,
-       "size": true,
-       "grow": true,
-       "float": true,
-       "rows": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "additionalProperties": false,
-         "required": [
-          "label",
-          "value",
-          "target"
-         ],
-         "properties": {
-          "label": {
-           "type": "string"
-          },
-          "sub": {
-           "type": "string"
-          },
-          "value": {
-           "type": "number"
-          },
-          "target": {
-           "type": "number"
-          },
-          "format": {
-           "$ref": "#/$defs/format"
-          },
-          "decimals": {
-           "type": "integer"
-          },
-          "target_label": {
-           "type": "string"
-          },
-          "tag": {
-           "type": "string"
-          },
-          "at": {
-           "$ref": "#/$defs/at"
-          }
-         }
-        }
-       }
-      }
-     }
-    },
-    {
-     "if": {
-      "properties": {
-       "type": {
-        "const": "meter"
-       }
-      }
-     },
-     "then": {
-      "required": [
-       "value",
-       "max"
-      ],
-      "additionalProperties": false,
-      "properties": {
-       "type": true,
-       "id": true,
-       "at": true,
-       "size": true,
-       "grow": true,
-       "float": true,
-       "label": {
-        "type": "string"
-       },
-       "value": {
-        "type": "number"
-       },
-       "max": {
-        "type": "number"
-       },
-       "marker": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-         "value": {
+         "end": {
           "type": "number"
          },
-         "label": {
-          "type": "string"
-         }
-        }
-       },
-       "value_label": {
-        "type": "string"
-       },
-       "note": {
-        "type": "string"
-       },
-       "tone": {
-        "$ref": "#/$defs/tone"
-       }
-      }
-     }
-    },
-    {
-     "if": {
-      "properties": {
-       "type": {
-        "const": "rings"
-       }
-      }
-     },
-     "then": {
-      "required": [
-       "rings"
-      ],
-      "additionalProperties": false,
-      "properties": {
-       "type": true,
-       "id": true,
-       "at": true,
-       "size": true,
-       "grow": true,
-       "float": true,
-       "rings": {
-        "type": "array",
-        "items": {
-         "type": "object",
-         "additionalProperties": false,
-         "required": [
-          "pct"
-         ],
-         "properties": {
-          "pct": {
-           "type": "number"
-          },
-          "label": {
-           "type": "string"
-          },
-          "center": {
-           "type": "string"
-          },
-          "center_sub": {
-           "type": "string"
-          },
-          "at": {
-           "$ref": "#/$defs/at"
-          }
-         }
-        }
-       }
-      }
-     }
-    },
-    {
-     "if": {
-      "properties": {
-       "type": {
-        "const": "gauge"
-       }
-      }
-     },
-     "then": {
-      "required": [
-       "from",
-       "to"
-      ],
-      "additionalProperties": false,
-      "properties": {
-       "type": true,
-       "id": true,
-       "at": true,
-       "size": true,
-       "grow": true,
-       "float": true,
-       "min": {
-        "type": "number"
-       },
-       "max": {
-        "type": "number"
-       },
-       "bands": {
-        "type": "array",
-        "items": {
-         "type": "array"
-        }
-       },
-       "ticks": {
-        "$ref": "#/$defs/numbers"
-       },
-       "tick_suffix": {
-        "type": "string"
-       },
-       "from": {
-        "type": "number"
-       },
-       "to": {
-        "type": "number"
-       },
-       "decimals": {
-        "type": "integer"
-       },
-       "suffix": {
-        "type": "string"
-       },
-       "from_label": {
-        "type": "string"
-       },
-       "to_label": {
-        "type": "string"
-       },
-       "chips": {
-        "type": "array",
-        "items": {
-         "$ref": "#/$defs/chip"
-        }
-       }
-      }
-     }
-    },
-    {
-     "if": {
-      "properties": {
-       "type": {
-        "const": "flow"
-       }
-      }
-     },
-     "then": {
-      "required": [
-       "sources",
-       "outputs"
-      ],
-      "additionalProperties": false,
-      "properties": {
-       "type": true,
-       "id": true,
-       "at": true,
-       "size": true,
-       "grow": true,
-       "float": true,
-       "sources": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-         "total",
-         "parts"
-        ],
-        "properties": {
-         "label": {
-          "type": "string"
-         },
-         "total": {
-          "type": "number"
-         },
-         "parts": {
-          "type": "array",
-          "items": {
-           "type": "array"
-          }
-         }
-        }
-       },
-       "leftover": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-         "value": {
-          "type": "number"
-         },
-         "label": {
-          "type": "string"
-         }
-        }
-       },
-       "outputs": {
-        "type": "array",
-        "items": {
-         "type": "array"
-        }
-       },
-       "tank": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-         "from",
-         "to",
-         "max"
-        ],
-        "properties": {
-         "label": {
-          "type": "string"
-         },
-         "from": {
-          "type": "number"
-         },
-         "to": {
+         "min": {
           "type": "number"
          },
          "max": {
           "type": "number"
          },
-         "sub": {
-          "type": "string"
+         "ticks": {
+          "$ref": "#/$defs/numbers"
          },
-         "sub2": {
-          "type": "string"
+         "radius": {
+          "type": "number"
+         },
+         "cy": {
+          "type": "number"
+         },
+         "dx": {
+          "type": "number"
          },
          "format": {
           "$ref": "#/$defs/format"
          },
+         "divide": {
+          "type": "number"
+         },
          "decimals": {
           "type": "integer"
+         },
+         "prefix": {
+          "type": "string"
+         },
+         "suffix": {
+          "type": "string"
+         },
+         "sign": {
+          "type": "boolean"
+         },
+         "domain": {
+          "type": "array"
+         },
+         "grid": {
+          "type": "boolean"
+         },
+         "r": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+           "min": {
+            "type": "number"
+           },
+           "max": {
+            "type": "number"
+           },
+           "step": {
+            "type": "number",
+            "exclusiveMinimum": 0
+           }
+          }
+         }
+        }
+       },
+       "margin": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+         "left": {
+          "type": "number"
+         },
+         "right": {
+          "type": "number"
+         },
+         "top": {
+          "type": "number"
+         },
+         "bottom": {
+          "type": "number"
+         }
+        }
+       },
+       "legend": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "required": [
+          "label"
+         ],
+         "properties": {
+          "label": {
+           "type": "string"
+          },
+          "tone": {
+           "type": "string"
+          },
+          "mark": {
+           "enum": [
+            "bar",
+            "line",
+            "dash",
+            "point"
+           ]
+          },
+          "pattern": {
+           "enum": [
+            "hatch"
+           ]
+          }
+         }
+        }
+       },
+       "layers": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+         "$ref": "#/$defs/layer"
+        }
+       },
+       "y2": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+         "type": {
+          "enum": [
+           "band",
+           "linear"
+          ]
+         },
+         "domain": {
+          "type": "array"
+         },
+         "min": {
+          "type": "number"
+         },
+         "max": {
+          "type": "number"
+         },
+         "step": {
+          "type": "number",
+          "exclusiveMinimum": 0
+         },
+         "labels": {
+          "type": "boolean"
+         },
+         "grid": {
+          "type": "boolean"
+         },
+         "zero": {
+          "type": "boolean"
+         },
+         "emphasis": {
+          "$ref": "#/$defs/strings"
+         },
+         "size": {
+          "type": "number"
+         },
+         "format": {
+          "$ref": "#/$defs/format"
          },
          "divide": {
           "type": "number"
          },
-         "at": {
-          "$ref": "#/$defs/at"
-         }
-        }
-       },
-       "highlight": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-         "text": {
+         "decimals": {
+          "type": "integer"
+         },
+         "prefix": {
           "type": "string"
          },
-         "at": {
-          "$ref": "#/$defs/at"
-         }
-        }
-       },
-       "at_flow": {
-        "$ref": "#/$defs/at"
-       }
-      }
-     }
-    },
-    {
-     "if": {
-      "properties": {
-       "type": {
-        "const": "calendar"
-       }
-      }
-     },
-     "then": {
-      "additionalProperties": false,
-      "properties": {
-       "type": true,
-       "id": true,
-       "at": true,
-       "size": true,
-       "grow": true,
-       "float": true,
-       "band": {
-        "type": "string"
-       },
-       "day": {
-        "type": "string"
-       },
-       "month": {
-        "type": "string"
-       },
-       "time": {
-        "type": "string"
-       },
-       "sub": {
-        "type": "string"
-       }
-      }
-     }
-    },
-    {
-     "if": {
-      "properties": {
-       "type": {
-        "const": "threshold"
-       }
-      }
-     },
-     "then": {
-      "required": [
-       "target",
-       "value"
-      ],
-      "additionalProperties": false,
-      "properties": {
-       "type": true,
-       "id": true,
-       "at": true,
-       "size": true,
-       "grow": true,
-       "float": true,
-       "target": {
-        "type": "string"
-       },
-       "value": {
-        "type": "number"
-       },
-       "label": {
-        "type": "string"
-       },
-       "tone": {
-        "$ref": "#/$defs/tone"
-       },
-       "style": {
-        "enum": [
-         "water",
-         "line"
-        ]
-       },
-       "recolor": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-         "above": {
-          "$ref": "#/$defs/tone"
+         "suffix": {
+          "type": "string"
          },
-         "below": {
-          "$ref": "#/$defs/tone"
+         "sign": {
+          "type": "boolean"
+         },
+         "tone": {
+          "type": "string"
          }
         }
-       }
-      }
-     }
-    },
-    {
-     "if": {
-      "properties": {
-       "type": {
-        "const": "callout"
-       }
-      }
-     },
-     "then": {
-      "required": [
-       "target",
-       "idx",
-       "text"
-      ],
-      "additionalProperties": false,
-      "properties": {
-       "type": true,
-       "id": true,
-       "at": true,
-       "size": true,
-       "grow": true,
-       "float": true,
-       "target": {
-        "type": "string"
-       },
-       "idx": {
-        "type": "integer"
-       },
-       "series": {
-        "type": "string"
-       },
-       "value": {
-        "type": "number"
-       },
-       "text": {
-        "type": "string"
-       },
-       "tone": {
-        "$ref": "#/$defs/tone"
-       },
-       "shape": {
-        "enum": [
-         "pill",
-         "diamond"
-        ]
-       },
-       "place": {
-        "enum": [
-         "above",
-         "left"
-        ]
-       },
-       "pulse": {
-        "type": "boolean"
-       },
-       "ping": {
-        "type": "boolean"
-       }
-      }
-     }
-    },
-    {
-     "if": {
-      "properties": {
-       "type": {
-        "const": "bracket"
-       }
-      }
-     },
-     "then": {
-      "required": [
-       "target",
-       "from",
-       "to",
-       "text"
-      ],
-      "additionalProperties": false,
-      "properties": {
-       "type": true,
-       "id": true,
-       "at": true,
-       "size": true,
-       "grow": true,
-       "float": true,
-       "target": {
-        "type": "string"
-       },
-       "from": {
-        "type": "integer"
-       },
-       "to": {
-        "type": "integer"
-       },
-       "text": {
-        "type": "string"
-       },
-       "tone": {
-        "$ref": "#/$defs/tone"
-       },
-       "shade": {
-        "type": "boolean"
-       },
-       "place": {
-        "enum": [
-         "top",
-         "bars"
-        ]
-       }
-      }
-     }
-    },
-    {
-     "if": {
-      "properties": {
-       "type": {
-        "const": "note"
-       }
-      }
-     },
-     "then": {
-      "required": [
-       "target",
-       "idx",
-       "lines"
-      ],
-      "additionalProperties": false,
-      "properties": {
-       "type": true,
-       "id": true,
-       "at": true,
-       "size": true,
-       "grow": true,
-       "float": true,
-       "target": {
-        "type": "string"
-       },
-       "idx": {
-        "type": "integer"
-       },
-       "lines": {
-        "$ref": "#/$defs/strings"
-       },
-       "tone": {
-        "$ref": "#/$defs/tone"
        }
       }
      }
     }
    ]
+  },
+  "axis": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "type": {
+     "enum": [
+      "band",
+      "linear"
+     ]
+    },
+    "domain": {
+     "type": "array"
+    },
+    "min": {
+     "type": "number"
+    },
+    "max": {
+     "type": "number"
+    },
+    "step": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "labels": {
+     "type": "boolean"
+    },
+    "grid": {
+     "type": "boolean"
+    },
+    "zero": {
+     "type": "boolean"
+    },
+    "emphasis": {
+     "$ref": "#/$defs/strings"
+    },
+    "size": {
+     "type": "number"
+    },
+    "format": {
+     "$ref": "#/$defs/format"
+    },
+    "divide": {
+     "type": "number"
+    },
+    "decimals": {
+     "type": "integer"
+    },
+    "prefix": {
+     "type": "string"
+    },
+    "suffix": {
+     "type": "string"
+    },
+    "sign": {
+     "type": "boolean"
+    }
+   }
+  },
+  "datum": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "x": {},
+    "y": {},
+    "y0": {},
+    "y1": {},
+    "x0": {},
+    "x1": {},
+    "tone": {
+     "type": "string"
+    },
+    "opacity": {
+     "type": "number"
+    },
+    "label": {
+     "type": "string"
+    },
+    "label_tone": {
+     "type": "string"
+    },
+    "label_pos": {
+     "enum": [
+      "start",
+      "end"
+     ]
+    },
+    "at": {
+     "$ref": "#/$defs/at"
+    },
+    "text": {
+     "type": "string"
+    },
+    "value": {
+     "type": "number"
+    },
+    "from": {
+     "type": "number"
+    },
+    "format": {
+     "$ref": "#/$defs/format"
+    },
+    "divide": {
+     "type": "number"
+    },
+    "decimals": {
+     "type": "integer"
+    },
+    "prefix": {
+     "type": "string"
+    },
+    "suffix": {
+     "type": "string"
+    },
+    "sign": {
+     "type": "boolean"
+    },
+    "dur": {
+     "type": "number"
+    },
+    "dx": {
+     "type": "number"
+    },
+    "dy": {
+     "type": "number"
+    },
+    "anchor": {
+     "enum": [
+      "start",
+      "middle",
+      "end"
+     ]
+    },
+    "size": {
+     "type": "number"
+    },
+    "weight": {
+     "type": "number"
+    },
+    "box": {
+     "type": "string"
+    },
+    "pos": {
+     "type": "string"
+    },
+    "theta": {
+     "type": "number"
+    },
+    "r": {
+     "type": "number"
+    },
+    "theta0": {
+     "type": "number"
+    },
+    "theta1": {
+     "type": "number"
+    },
+    "points": {
+     "type": "array"
+    },
+    "closed": {
+     "type": "boolean"
+    },
+    "total": {
+     "type": "boolean"
+    },
+    "shape": {
+     "enum": [
+      "circle",
+      "diamond"
+     ]
+    },
+    "style": {
+     "enum": [
+      "fill",
+      "ring"
+     ]
+    },
+    "ping": {
+     "type": "boolean"
+    },
+    "pattern": {
+     "enum": [
+      "hatch"
+     ]
+    }
+   }
+  },
+  "layer": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "mark",
+    "data"
+   ],
+   "properties": {
+    "mark": {
+     "enum": [
+      "bar",
+      "line",
+      "area",
+      "rect",
+      "rule",
+      "point",
+      "text",
+      "arc",
+      "ribbon",
+      "path"
+     ]
+    },
+    "data": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/datum"
+     }
+    },
+    "transform": {
+     "enum": [
+      "stack",
+      "waterfall",
+      "cumulative"
+     ]
+    },
+    "tone": {
+     "type": "string"
+    },
+    "opacity": {
+     "type": "number"
+    },
+    "width": {
+     "type": "number"
+    },
+    "dash": {
+     "$ref": "#/$defs/numbers"
+    },
+    "pattern": {
+     "enum": [
+      "hatch"
+     ]
+    },
+    "radius": {
+     "type": "number"
+    },
+    "size": {
+     "type": "number"
+    },
+    "weight": {
+     "type": "number"
+    },
+    "anchor": {
+     "enum": [
+      "start",
+      "middle",
+      "end"
+     ]
+    },
+    "box": {
+     "type": "string"
+    },
+    "letter_spacing": {
+     "type": "number"
+    },
+    "from_dx": {
+     "type": "number"
+    },
+    "from_dy": {
+     "type": "number"
+    },
+    "stroke": {
+     "type": "string"
+    },
+    "dodge": {
+     "type": "array",
+     "items": {
+      "type": "integer"
+     },
+     "minItems": 2,
+     "maxItems": 2
+    },
+    "labels": {
+     "oneOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "object",
+       "additionalProperties": false,
+       "properties": {
+        "only": {},
+        "position": {
+         "enum": [
+          "end",
+          "top",
+          "inside",
+          "center",
+          "right",
+          "bottom"
+         ]
+        },
+        "size": {
+         "type": "number"
+        },
+        "weight": {
+         "type": "number"
+        },
+        "tone": {
+         "type": "string"
+        },
+        "format": {
+         "$ref": "#/$defs/format"
+        },
+        "divide": {
+         "type": "number"
+        },
+        "decimals": {
+         "type": "integer"
+        },
+        "prefix": {
+         "type": "string"
+        },
+        "suffix": {
+         "type": "string"
+        },
+        "sign": {
+         "type": "boolean"
+        }
+       }
+      }
+     ]
+    },
+    "markers": {
+     "type": "boolean"
+    },
+    "marker_size": {
+     "type": "number"
+    },
+    "inner": {
+     "type": "number"
+    },
+    "outer": {
+     "type": "number"
+    },
+    "gap": {
+     "type": "number"
+    },
+    "track": {
+     "type": "string"
+    },
+    "label_pos": {
+     "enum": [
+      "inside",
+      "outside",
+      "start",
+      "end"
+     ]
+    },
+    "label_tone": {
+     "type": "string"
+    },
+    "length": {
+     "type": "number"
+    },
+    "shape": {
+     "enum": [
+      "circle",
+      "diamond"
+     ]
+    },
+    "style": {
+     "enum": [
+      "fill",
+      "ring"
+     ]
+    },
+    "ping": {
+     "type": "boolean"
+    },
+    "dur": {
+     "type": "number"
+    },
+    "format": {
+     "$ref": "#/$defs/format"
+    },
+    "divide": {
+     "type": "number"
+    },
+    "decimals": {
+     "type": "integer"
+    },
+    "prefix": {
+     "type": "string"
+    },
+    "suffix": {
+     "type": "string"
+    },
+    "sign": {
+     "type": "boolean"
+    },
+    "animate": {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "enter": {
+       "enum": [
+        "grow",
+        "draw",
+        "fade",
+        "pop",
+        "count",
+        "rise",
+        "slide",
+        "none"
+       ]
+      },
+      "at": {
+       "$ref": "#/$defs/at"
+      },
+      "stagger": {
+       "type": "number"
+      },
+      "dur": {
+       "type": "number"
+      }
+     }
+    },
+    "changes": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "at"
+      ],
+      "properties": {
+       "at": {
+        "$ref": "#/$defs/at"
+       },
+       "idx": {
+        "$ref": "#/$defs/indices"
+       },
+       "invert": {
+        "type": "boolean"
+       },
+       "tone": {
+        "type": "string"
+       },
+       "opacity": {
+        "type": "number"
+       },
+       "pulse": {
+        "type": "boolean"
+       }
+      }
+     }
+    },
+    "axis": {
+     "enum": [
+      "y",
+      "y2"
+     ]
+    },
+    "closed": {
+     "type": "boolean"
+    }
+   }
   }
  }
 }

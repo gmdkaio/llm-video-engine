@@ -96,7 +96,7 @@ struct Resolver {
         try {
             rx = std::regex(word, std::regex::ECMAScript | std::regex::icase);
         } catch (const std::regex_error&) {
-            if (warnings) warnings->push_back("scene " + std::to_string(scene + 1) + ": bad at regex '" + word + "'");
+            if (warnings) warnings->push_back("scene " + std::to_string(scene + 1) + " · AT · '" + word + "' is not a valid regex");
             return start + dflt;
         }
         int hits = 0;
@@ -105,7 +105,7 @@ struct Resolver {
                 if (++hits == n) return start + w.t + offset;
             }
         }
-        if (warnings) warnings->push_back("scene " + std::to_string(scene + 1) + ": at '" + word + "' matched no word; using " + std::to_string(dflt) + " s");
+        if (warnings) warnings->push_back("scene " + std::to_string(scene + 1) + " · AT · '" + word + "' matches no word of the speech; using " + std::to_string((int)std::lround(dflt)) + " s");
         return start + dflt;
     }
 };

@@ -33,22 +33,6 @@ inline Ease back(float k) { Ease e = Ease::parse("back.out"); e.back = k; return
 
 struct Rect { float x = 0, y = 0, w = 0, h = 0; };
 
-// What annotations need to know about a chart drawn earlier in the same box.
-struct ChartInfo {
-    Node* layer = nullptr;                 // annotations are added here, in the chart's coordinates
-    float left = 0, right = 0, top = 0, bottom = 0;  // plot area
-    float slot = 0;                        // x distance between categories
-    std::function<float(int)> x;           // centre of category i
-    std::function<float(double)> y;        // value -> y
-    std::vector<double> values;            // bar values (bars) or the first series (lines)
-    std::vector<double> tops;              // value at the top of each bar (with stack)
-    std::vector<Node*> bars;               // bar rects, for recolor and pulse
-    std::vector<Node*> labels;             // bar value labels
-    std::vector<bool> projection;
-    std::map<std::string, std::vector<double>> series;
-    std::map<std::string, Node*> seriesPaths;
-};
-
 struct Kit {
     const Fonts& fonts;
     Theme th;
@@ -60,12 +44,18 @@ struct Kit {
     int k = 0;
     float S0 = 0, t0 = 0;                  // scene start, speech start
     at::Resolver when;
-    std::map<std::string, ChartInfo> charts;
 
     float at(const json& spec, float dflt) const { return when(spec, dflt); }
 
     // Colors by tone name.
     Color tone(const std::string& t) const {
+        if (!t.empty() && t[0] == '#') return Color::hex(t);
+        if (t == "accent_dim") return th.accentDim;
+        if (t == "neutral2") return th.neutral2;
+        if (t == "grid") return th.grid;
+        if (t == "line") return th.line;
+        if (t == "panel") return th.panel;
+        if (t == "bg") return th.bg;
         if (t == "good") return th.good;
         if (t == "bad") return th.bad;
         if (t == "warn") return th.warn;
@@ -155,8 +145,8 @@ inline Node* counter(Node* parent, float x, float baselineY, double from, double
 void buildComponent(Kit& kit, Node* parent, const json& c, Rect r);
 // Natural height of a text-like component at width w; < 0 when it should grow instead.
 float intrinsicHeight(const Kit& kit, const json& c, float w);
-bool isAnnotation(const std::string& type);
-void buildAnnotation(Kit& kit, const json& c);
+// A chart made of mark layers (chart.cpp).
+void chart(Kit& kit, Node* parent, const json& c, Rect r);
 // A chip (pill with tone colors); returns its group, positioned at (x, y). Width in *w.
 Node* chip(Kit& kit, Node* parent, float x, float y, const std::string& textStr, const std::string& tone, float font = 12.5f,
            float padX = 11, float padY = 6, float* w = nullptr);

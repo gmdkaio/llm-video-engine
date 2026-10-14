@@ -12,6 +12,28 @@ Early. The engine renders plans written in the `llm-video-engine/plan@1` format
 in `skill/` analyzes a deck and writes such a plan. Narration audio, vertical
 video and the slide-camera scene are not built yet.
 
+## How it is used
+
+1. The LLM, with the skill, reads the deck and returns `video-plan.zip`: the plan,
+   the logos it uses and the narration text. It never renders video.
+2. On your machine:
+
+```
+llm-video-engine validate video-plan.zip   # layout problems, one pasteable line each
+llm-video-engine grid video-plan.zip       # one frame per scene
+llm-video-engine render video-plan.zip     # the MP4 (add --encoder qsv for Intel Quick Sync)
+```
+
+The engine builds to `engine/build/release/`. Add that folder to your PATH once so the
+commands above work from anywhere (PowerShell, then open a new terminal):
+
+```
+[Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + (Resolve-Path engine\build\release), 'User')
+```
+
+To install the skill in Claude, build its zip with `node tools/package_skill.mjs`
+and upload `dist/llm-video-engine-skill.zip`.
+
 ## Benchmark
 
 Render time for the same video, produced two ways on the same machine:
@@ -53,7 +75,7 @@ without the engine.
 - `skill/` the LLM side: deck analysis, plan format, plan validator
 - `themes/default/` default font (Montserrat, OFL)
 - `examples/` example plans, fictitious data only
-- `tools/` helper scripts
+- `tools/` helper scripts (`package_skill.mjs` builds the skill zip)
 
 ## License
 

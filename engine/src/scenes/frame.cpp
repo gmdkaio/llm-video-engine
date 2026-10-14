@@ -56,10 +56,9 @@ void layoutBox(Kit& kit, Node* parent, const json& box, Rect r) {
 
     const bool row = box.value("dir", "column") == "row";
     const float gap = box.value("gap", 16.f);
-    std::vector<const json*> flow, floats, notes;
+    std::vector<const json*> flow, floats;
     for (const auto& it : box["items"]) {
-        if (!isBox(it) && isAnnotation(it["type"].get<std::string>())) notes.push_back(&it);
-        else if (!isBox(it) && it.contains("float")) floats.push_back(&it);
+        if (!isBox(it) && it.contains("float")) floats.push_back(&it);
         else flow.push_back(&it);
     }
 
@@ -94,7 +93,6 @@ void layoutBox(Kit& kit, Node* parent, const json& box, Rect r) {
         const float fy = a.find("bottom") != std::string::npos ? in.y + in.h - h - y : in.y + y;
         buildComponent(kit, g, *f, {fx, fy, w, h});
     }
-    for (const json* n : notes) buildAnnotation(kit, *n);
 }
 
 // ---------- scenes ----------
@@ -190,6 +188,61 @@ void outro(Kit& kit, Node* sc, const json& c, const Logos& lg) {
     row->opacity.fromTo(0, 1, kit.S0 + .6f, .6f, ease::p1Out);
 }
 
+// The tab itself, with a camera that moves to each focus box (bbox in the 1280-wide
+// capture's pixels), outlines it, dims the rest and shows an optional callout.
+void slideScene(Kit& kit, Node* sc, const json& c, const LoadedImage& img, float S1) {
+    const Theme& th = kit.th;
+    const float iw = kW, ih = kW / img.aspect;
+    Node* cam = sc->add(group());
+    cam->add(imageNode(0, 0, iw, ih, img.image));
+    cam->scale.fromTo(1.04f, 1, kit.S0, 1.2f, ease::p2Out);
+    const auto& focus = c.value("focus", json::array());
+    const float zmax = c.value("zoom_max", 1.7f);
+    std::vector<float> T;
+    for (size_t i = 0; i < focus.size(); ++i) T.push_back(kit.at(focus[i].value("at", json()), 1.5f + i * 3));
+    for (size_t i = 0; i < focus.size(); ++i) {
+        const auto& fc = focus[i];
+        const auto bb = fc.at("bbox").get<std::vector<float>>();
+        const float bx = bb[0], by = bb[1], bw = bb[2], bh = bb[3];
+        const float z = std::clamp(std::min(kW * .62f / bw, kH * .58f / bh), 1.f, zmax);
+        const bool call = fc.contains("callout");
+        const float tx = kW / 2 - (bx + bw / 2) * z, ty = (call ? 330.f : 360.f) - (by + bh / 2) * z;
+        const float t = T[i];
+        cam->tx.to(tx, t, 1.f, ease::p3InOut, 0);
+        cam->ty.to(ty, t, 1.f, ease::p3InOut, 0);
+        cam->scale.to(z, t, 1.f, ease::p3InOut, 1);
+        // Outline + dimmed surround, in screen space at the end of the move.
+        const float L = tx + bx * z - 6, Tp = ty + by * z - 6, W = bw * z + 12, H = bh * z + 12;
+        Node* hl = sc->add(group());
+        const Color dim = Color{0, 0, 0, .45f};
+        hl->add(rect(0, 0, kW, std::max(0.f, Tp), dim));
+        hl->add(rect(0, Tp + H, kW, std::max(0.f, kH - Tp - H), dim));
+        hl->add(rect(0, Tp, std::max(0.f, L), H, dim));
+        hl->add(rect(L + W, Tp, std::max(0.f, kW - L - W), H, dim));
+        Node* box = hl->add(rect(L, Tp, W, H, Color{}, 10));
+        box->stroke = th.accent; box->strokeW = 3;
+        if (call) {
+            const TextStyle st = style(16, 600);
+            const auto lines = kit.wrap(fc["callout"].get<std::string>(), st, 350);
+            const float lh = 16 * 1.35f, ch = lines.size() * lh + 24;
+            const float cxp = std::min(kW - 400, std::max(20.f, L)), cyp = std::min(kH - ch - 20, Tp + H + 14);
+            Node* cg = hl->add(group(cxp, cyp));
+            cg->add(rect(0, 0, 380, ch, th.panel, 10));
+            cg->add(rect(0, 0, 3, ch, th.accent));
+            for (size_t k = 0; k < lines.size(); ++k) cg->add(text(16, baseline(12 + k * lh, 16, lh), lines[k], st, th.text));
+        }
+        const float tEnd = (i + 1 < focus.size() ? T[i + 1] : S1 - 1.2f) - .2f;
+        hl->opacity.set(0, 0);
+        hl->opacity.fromTo(0, 1, t + .9f, .35f, ease::p1Out);
+        hl->opacity.to(0, tEnd, .3f, ease::p1Out, 1);
+    }
+    if (!focus.empty() && c.value("back", true)) {
+        cam->tx.to(0, S1 - 1.3f, .9f, ease::p2InOut, 0);
+        cam->ty.to(0, S1 - 1.3f, .9f, ease::p2InOut, 0);
+        cam->scale.to(1, S1 - 1.3f, .9f, ease::p2InOut, 1);
+    }
+}
+
 }  // namespace
 
 Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDir, float pixelScale) {
@@ -221,6 +274,7 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
     }
     const float total = kit.B.back();
 
+    Video v;
     // Logos, rasterized once at the largest size they are drawn.
     Logos lg;
     const json logos = plan.value("logos", json::object());
@@ -235,7 +289,6 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
     lg.clientScale = logos.value("client_scale", 1.f);
     lg.brandReveal = logos.value("brand_reveal", 0.f);
 
-    Video v;
     v.duration = total;
     v.root = group();
     Node* root = v.root.get();
@@ -294,10 +347,10 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
         kit.S0 = kit.B[k];
         kit.t0 = kit.S0 + timeline::kLead;
         kit.when = {words[k], kit.t0, k, &kit.warnings};
-        kit.charts.clear();
         const float S1 = kit.B[k + 1];
 
         Node* sc = scenesNode->add(group());
+        v.scenes.push_back(sc);
         sc->opacity.set(0, 0);
         sc->opacity.fromTo(0, 1, kit.S0, .6f, ease::p3Out);
         sc->tx.fromTo(30, 0, kit.S0, .6f, ease::p3Out);
@@ -317,6 +370,7 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
 
         if (type == "intro") intro(kit, sc, c, lg);
         else if (type == "outro") outro(kit, sc, c, lg);
+        else if (type == "slide") slideScene(kit, sc, c, loadImage(asset(c.at("image").get<std::string>()), (int)std::ceil(720 * pixelScale)), S1);
         else if (type == "content") {
             Node* in = sc->add(group(kInnerX, kInnerY));
             titleBlock(kit, in, c);

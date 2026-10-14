@@ -256,7 +256,26 @@ const THEME = () => {
     accents, font: cs(titleEl || document.body).fontFamily, logos: uniq };
 };
 
-const browser = await chromium.launch({ channel: 'chrome', args: ['--hide-scrollbars'] });
+// Browser: installed Chrome, else Playwright's Chromium, else any Chromium in the Playwright cache
+// (e.g. installed for Python Playwright in a sandbox), else $CHROMIUM_PATH.
+async function launch() {
+  const args = ['--hide-scrollbars'];
+  const tries = [{ channel: 'chrome' }, {}];
+  if (process.env.CHROMIUM_PATH) tries.unshift({ executablePath: process.env.CHROMIUM_PATH });
+  const cache = [process.env.PLAYWRIGHT_BROWSERS_PATH, path.join(process.env.HOME || process.env.USERPROFILE || '', '.cache/ms-playwright'),
+    path.join(process.env.LOCALAPPDATA || '', 'ms-playwright')].filter(Boolean);
+  for (const dir of cache) {
+    if (!fs.existsSync(dir)) continue;
+    for (const d of fs.readdirSync(dir).filter((x) => /^chromium/.test(x)).sort().reverse())
+      for (const exe of ['chrome-linux/chrome', 'chrome-linux64/chrome', 'chrome-headless-shell-linux64/chrome-headless-shell', 'chrome-win/chrome.exe'])
+        if (fs.existsSync(path.join(dir, d, exe))) tries.push({ executablePath: path.join(dir, d, exe) });
+  }
+  for (const t of tries) {
+    try { return await chromium.launch({ ...t, args }); } catch {}
+  }
+  throw new Error('no Chromium found: install Chrome, run `npx playwright install chromium`, or set CHROMIUM_PATH');
+}
+const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 await page.goto('file:///' + deck.replace(/\\/g, '/'), { waitUntil: 'load' });
 await page.waitForTimeout(1800);
