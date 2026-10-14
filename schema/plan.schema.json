@@ -531,7 +531,9 @@
       "chips",
       "kv",
       "list",
-      "chart"
+      "chart",
+      "kpi",
+      "table"
      ]
     }
    },
@@ -959,6 +961,308 @@
          },
          "tone": {
           "type": "string"
+         }
+        }
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "kpi"
+       }
+      }
+     },
+     "then": {
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "label": {
+        "type": "string"
+       },
+       "value": {
+        "type": "number"
+       },
+       "text": {
+        "type": "string"
+       },
+       "from": {
+        "type": "number"
+       },
+       "dur": {
+        "type": "number"
+       },
+       "format": {
+        "$ref": "#/$defs/format"
+       },
+       "divide": {
+        "type": "number"
+       },
+       "decimals": {
+        "type": "integer"
+       },
+       "prefix": {
+        "type": "string"
+       },
+       "suffix": {
+        "type": "string"
+       },
+       "sign": {
+        "type": "boolean"
+       },
+       "font": {
+        "type": "number"
+       },
+       "tone": {
+        "type": "string"
+       },
+       "card": {
+        "type": "boolean"
+       },
+       "highlight": {
+        "type": "boolean"
+       },
+       "sub": {
+        "type": "string"
+       },
+       "spark": {
+        "type": "array",
+        "items": {
+         "type": "number"
+        },
+        "minItems": 2
+       },
+       "spark_tone": {
+        "type": "string"
+       },
+       "delta": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+         "value": {
+          "type": "number"
+         },
+         "text": {
+          "type": "string"
+         },
+         "format": {
+          "$ref": "#/$defs/format"
+         },
+         "divide": {
+          "type": "number"
+         },
+         "decimals": {
+          "type": "integer"
+         },
+         "prefix": {
+          "type": "string"
+         },
+         "suffix": {
+          "type": "string"
+         },
+         "sign": {
+          "type": "boolean"
+         },
+         "tone": {
+          "type": "string"
+         },
+         "label": {
+          "type": "string"
+         },
+         "arrow": {
+          "type": "boolean"
+         }
+        }
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "table"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "columns",
+       "rows"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "columns": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "properties": {
+          "label": {
+           "type": "string"
+          },
+          "align": {
+           "enum": [
+            "left",
+            "center",
+            "right"
+           ]
+          },
+          "width": {
+           "type": "number"
+          },
+          "tone": {
+           "type": "string"
+          },
+          "format": {
+           "$ref": "#/$defs/format"
+          },
+          "divide": {
+           "type": "number"
+          },
+          "decimals": {
+           "type": "integer"
+          },
+          "prefix": {
+           "type": "string"
+          },
+          "suffix": {
+           "type": "string"
+          },
+          "sign": {
+           "type": "boolean"
+          }
+         }
+        }
+       },
+       "rows": {
+        "type": "array",
+        "items": {
+         "oneOf": [
+          {
+           "type": "array",
+           "items": {
+            "type": [
+             "string",
+             "number",
+             "null"
+            ]
+           }
+          },
+          {
+           "type": "object",
+           "additionalProperties": false,
+           "required": [
+            "cells"
+           ],
+           "properties": {
+            "cells": {
+             "type": "array",
+             "items": {
+              "type": [
+               "string",
+               "number",
+               "null"
+              ]
+             }
+            },
+            "bold": {
+             "type": "boolean"
+            },
+            "total": {
+             "type": "boolean"
+            },
+            "indent": {
+             "type": "integer",
+             "minimum": 0
+            },
+            "highlight": {
+             "type": "boolean"
+            },
+            "tone": {
+             "type": "string"
+            },
+            "at": {
+             "$ref": "#/$defs/at"
+            }
+           }
+          }
+         ]
+        }
+       },
+       "header": {
+        "type": "boolean"
+       },
+       "lines": {
+        "type": "boolean"
+       },
+       "font": {
+        "type": "number"
+       },
+       "row_height": {
+        "type": "number"
+       },
+       "stagger": {
+        "type": "number"
+       },
+       "negative": {
+        "type": "string"
+       },
+       "changes": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "required": [
+          "at"
+         ],
+         "properties": {
+          "at": {
+           "$ref": "#/$defs/at"
+          },
+          "rows": {
+           "type": "array",
+           "items": {
+            "type": "integer",
+            "minimum": 0
+           }
+          },
+          "cols": {
+           "type": "array",
+           "items": {
+            "type": "integer",
+            "minimum": 0
+           }
+          },
+          "invert": {
+           "type": "boolean"
+          },
+          "highlight": {
+           "type": "boolean"
+          },
+          "tone": {
+           "type": "string"
+          },
+          "opacity": {
+           "type": "number"
+          },
+          "pulse": {
+           "type": "boolean"
+          }
          }
         }
        }

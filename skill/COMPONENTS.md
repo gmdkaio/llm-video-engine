@@ -100,6 +100,8 @@ Number formats (`format`): `k`, `mil`, `mi`, `pct`, `x`, `days`, `num`, with `de
 | `chips` | `items: [{text, tone, at}]`, `dir`: `row` (default) or `column`. Default tone `good`. |
 | `kv` | `title`, `rows: [[label, value], ...]`. A card with label/value rows. |
 | `list` | `items: [{title, text, at}]`, `numbered` (true). Full-width rows; the current row is outlined, earlier rows dim. |
+| `kpi` | a KPI card: `label`, `value` (counts up, from `from` or 0) or `text`, number format keys, `font` (auto from the card size), `tone` (value color), `delta` (`{value, format…, label, tone, arrow}` or `{text, tone}`: a pill with an up/down arrow; default tone good when positive, bad when negative, so set `tone` when up is bad, e.g. costs), `sub` (small line), `spark` (numbers: a sparkline along the bottom), `highlight` (accent outline), `card` (false: no panel). Put several in a `row` box with a `size`. |
+| `table` | `columns: [{label, align, width, tone, format…}]` (first column left-aligned and sized to its labels, the others right-aligned and share the rest by `width`), `rows`: arrays of cells, or `{cells, bold, total, indent, highlight, tone, at}` (numbers are formatted by their column). `negative` (tone for negative numbers, e.g. `"bad"`), `lines` (row separators), `header`, `font`, `row_height` (max, 40), `stagger`. `changes: [{at, rows, cols, highlight, tone, opacity, invert, pulse}]`: highlight a row (or with only `cols`, a column band), recolor cells, dim the other rows. Grows to fill its box. |
 | `chart` | layers of marks, below. Grows to fill its box. |
 
 ## `chart`
@@ -186,6 +188,26 @@ animated: dim everything but the month that matters, turn the bars below a thres
 
 ## Examples (fictitious numbers)
 
+Income statement (DRE) with the cost line and the current month highlighted on their words:
+```json
+{"type": "table", "negative": "bad", "lines": true,
+ "columns": [{"label": "Conta"}, {"label": "Ago"}, {"label": "Set"}, {"label": "% receita", "format": "pct", "decimals": 1, "tone": "text3"}],
+ "rows": [
+  {"cells": ["Receita líquida", 5110, 5420, 100], "total": true},
+  {"cells": ["(−) CPV", -3120, -3410, -62.9], "indent": 1},
+  {"cells": ["Lucro bruto", 1990, 2010, 37.1], "total": true},
+  {"cells": ["Lucro líquido", 340, 300, 5.5], "total": true, "tone": "accent"}],
+ "changes": [{"at": "custo", "rows": [1], "highlight": true}, {"at": "setembro", "cols": [2], "highlight": true}]}
+```
+
+A row of KPI cards:
+```json
+{"dir": "row", "size": 180, "items": [
+  {"type": "kpi", "label": "Receita líquida", "value": 5.42, "format": "mi", "decimals": 2,
+   "delta": {"value": 12, "format": "pct", "decimals": 0, "label": "vs ago"}, "spark": [4.1, 4.3, 4.0, 4.6, 4.8, 5.42], "at": "receita"},
+  {"type": "kpi", "label": "Prazo médio", "value": 42, "format": "days", "delta": {"value": 5, "suffix": " dias", "tone": "bad"}, "at": "prazo"}]}
+```
+
 Waterfall with the two biggest drops highlighted on a word:
 ```json
 {"type": "chart", "y": {"suffix": " k"},
@@ -266,6 +288,8 @@ scene 3, the deck's map is shown as a slide"). Never silently replace a chart.
 
 ## Rules for the skill
 
+- The deck's KPI cards and tables are rebuilt as `kpi` and `table` with the same labels, numbers, deltas and
+  highlighted rows; long tables keep the rows the story needs (totals and the lines the speech names).
 - **Rebuild the deck's chart as it is**: same chart type, same data points, same colors, same highlight, same
   annotations (targets, averages, splits, callouts). Any chart is a combination of the marks above; never swap
   it for a different chart because it is easier.

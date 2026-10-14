@@ -8,10 +8,11 @@ struct Locale {
     std::string currency = "R$ ";  // includes the separator before the amount
     char decimal = ',', thousands = '.';
     std::string days = "dias";
+    std::string thousand = " mil", million = " mi";  // suffixes of the mil and mi formats
 
     static Locale make(const std::string& tag) {
         Locale l;
-        if (tag.rfind("en", 0) == 0) { l.currency = "$"; l.decimal = '.'; l.thousands = ','; l.days = "days"; }
+        if (tag.rfind("en", 0) == 0) { l.currency = "$"; l.decimal = '.'; l.thousands = ','; l.days = "days"; l.thousand = "k"; l.million = "M"; }
         return l;
     }
 
@@ -33,8 +34,8 @@ struct Locale {
         const int d0 = dec < 0 ? 0 : dec, d1 = dec < 0 ? 1 : dec;
         std::string s;
         if (f == "k") s = currency + nf(a, d0) + "k";
-        else if (f == "mil") s = currency + nf(a, d0) + " mil";
-        else if (f == "mi") s = currency + nf(a, d1) + " mi";
+        else if (f == "mil") s = currency + nf(a, d0) + thousand;
+        else if (f == "mi") s = currency + nf(a, d1) + million;
         else if (f == "pct") s = nf(a, d1) + "%";
         else if (f == "x") s = nf(a, dec < 0 ? 2 : dec) + "\xc3\x97";  // ×
         else if (f == "days") s = nf(a, d0) + " " + days;

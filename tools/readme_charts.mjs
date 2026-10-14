@@ -19,8 +19,40 @@ const only = (() => { const i = process.argv.indexOf('--only'); return i < 0 ? n
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const xy = (xs, ys) => xs.map((x, i) => ({ x, y: ys[i] }));
 
-// Each chart: README title and line, the scene's speech (it sets the timing), and the chart.
+// Each entry: README title and line, the scene's speech (it sets the timing), and the chart (or a whole body).
 const charts = [
+  {
+    id: 'kpis', title: 'KPI cards', line: 'Values count up, deltas pop in with their arrow and tone, sparklines draw.',
+    kicker: ['Summary', 'September'], head: 'Revenue up,', hl: 'margin tighter',
+    speech: 'Revenue rose twelve percent, the margin slipped, and cash closed at four million.',
+    body: { items: [
+      { dir: 'row', size: 200, items: [
+        { type: 'kpi', label: 'Net revenue', value: 5.42, format: 'mi', decimals: 2, delta: { value: 12, format: 'pct', decimals: 0, label: 'vs Aug' }, spark: [4.1, 4.3, 4, 4.6, 4.8, 5.42], at: 'revenue' },
+        { type: 'kpi', label: 'EBITDA margin', value: 14.2, format: 'pct', delta: { value: -2.1, suffix: ' pp', decimals: 1, label: 'vs Aug' }, highlight: true, at: 'margin' },
+        { type: 'kpi', label: 'Cash', value: 4, format: 'mi', decimals: 1, sub: '3.2 months of fixed costs', at: 'cash' }] },
+      { dir: 'row', items: [
+        { type: 'kpi', label: 'Active customers', value: 1284, delta: { value: 37, label: 'new' }, at: 'revenue' },
+        { type: 'kpi', label: 'Days to collect', value: 42, format: 'days', delta: { value: 5, suffix: ' days', tone: 'bad' }, at: 'margin' },
+        { type: 'kpi', label: 'Default rate', value: 2.4, format: 'pct', delta: { text: 'stable', tone: 'neutral' }, at: 'cash' }] }] },
+  },
+  {
+    id: 'table', title: 'Income statement table', line: 'Rows enter in order, totals in bold, then the cost line and the month are highlighted.',
+    kicker: ['Income statement', 'thousands'], head: 'Net income of', hl: '300k',
+    speech: 'Net revenue grew, but the cost of goods grew faster, and net income for September came to three hundred thousand.',
+    body: { items: [{ type: 'table', negative: 'bad', lines: true,
+      columns: [{ label: 'Account' }, { label: 'Jul' }, { label: 'Aug' }, { label: 'Sep' }, { label: 'Year to date' }, { label: '% revenue', format: 'pct', decimals: 1, tone: 'text3' }],
+      rows: [
+        { cells: ['Gross revenue', 5800, 6020, 6310, 18130, 116.4], bold: true },
+        { cells: ['(−) Deductions', -880, -910, -890, -2680, -16.4], indent: 1 },
+        { cells: ['Net revenue', 4920, 5110, 5420, 15450, 100], total: true },
+        { cells: ['(−) Cost of goods', -2950, -3120, -3410, -9480, -62.9], indent: 1 },
+        { cells: ['Gross profit', 1970, 1990, 2010, 5970, 37.1], total: true },
+        { cells: ['(−) Operating expenses', -1180, -1210, -1240, -3630, -22.9], indent: 1 },
+        { cells: ['EBITDA', 790, 780, 770, 2340, 14.2], total: true },
+        { cells: ['(−) Depreciation and interest', -420, -440, -470, -1330, -8.7], indent: 1 },
+        { cells: ['Net income', 370, 340, 300, 1010, 5.5], total: true, tone: 'accent' }],
+      changes: [{ at: 'cost', rows: [3], highlight: true }, { at: 'september', cols: [3], highlight: true }] }] },
+  },
   {
     id: 'waterfall', title: 'Waterfall', line: 'From opening to closing balance, step by step; the biggest drops dim the rest.',
     kicker: ['Cash', 'March'], head: 'Cash closed', hl: 'at 410k',
@@ -191,7 +223,7 @@ for (const c of charts) {
   const plan = {
     schema: 'llm-video-engine/plan@1', output: c.title, config: { locale: 'en-US', formats: ['720'] }, theme,
     header: { period: 'Example · fictitious data' },
-    scenes: [{ type: 'content', tab: c.title, speech: c.speech, kicker: c.kicker, title: c.head, highlight: c.hl, body: { items: [c.chart] } }],
+    scenes: [{ type: 'content', tab: c.title, speech: c.speech, kicker: c.kicker, title: c.head, highlight: c.hl, body: c.body || { items: [c.chart] } }],
   };
   const planPath = path.join(tmp, `${c.id}.json`), mp4 = path.join(tmp, `${c.id}.mp4`), gif = path.join(outDir, `${c.id}.gif`);
   fs.writeFileSync(planPath, JSON.stringify(plan, null, 1));

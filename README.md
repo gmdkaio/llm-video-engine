@@ -12,15 +12,28 @@ Early. The engine renders plans written in the `llm-video-engine/plan@1` format
 in `skill/` analyzes a deck and writes such a plan. Narration audio and vertical
 video are not built yet.
 
-## Charts
+## Charts, tables and KPIs
 
 There is no fixed list of chart types. A chart in the plan is layers of marks
 (bars, lines, areas, rects, rules, points, texts, arcs, ribbons, paths), so the
 LLM can rebuild whatever chart the deck has with its own data and highlight.
-Some of them, rendered by the engine from fictitious plans:
+KPI cards and tables (income statements, rankings) are components of their own.
+Some examples, rendered by the engine from fictitious plans:
 
 <!-- charts:start -->
 <table>
+<tr>
+<td width="50%" valign="top">
+<img src=".github/assets/charts/kpis.gif" alt="KPI cards" width="100%"><br>
+<b>KPI cards</b><br>
+Values count up, deltas pop in with their arrow and tone, sparklines draw.
+</td>
+<td width="50%" valign="top">
+<img src=".github/assets/charts/table.gif" alt="Income statement table" width="100%"><br>
+<b>Income statement table</b><br>
+Rows enter in order, totals in bold, then the cost line and the month are highlighted.
+</td>
+</tr>
 <tr>
 <td width="50%" valign="top">
 <img src=".github/assets/charts/waterfall.gif" alt="Waterfall" width="100%"><br>

@@ -24,6 +24,8 @@ close with the next step or the meeting agenda, and a duration promise that matc
 donut, gauge, Sankey, stacked bars, scenario lines, timeline…), rebuild it from marks with the same data, colors,
 highlight and annotations, and animate it so the highlight lands on the word that names it. Never replace a chart
 with a different one because it is simpler, and never reuse visuals from another deck or from an earlier run.
+KPI cards become `kpi` components and tables (income statements, DRE, rankings) become `table`, with the deck's
+labels, numbers and highlighted rows.
 
 ## Files in this skill
 
@@ -83,8 +85,8 @@ For each scene, the visual is:
    which marks draw it (e.g. a waterfall is `bar` + `transform: "waterfall"`; a gauge is polar `arc` bands +
    a polar `rule` needle + a counting `text`; a Sankey is `rect` nodes + `ribbon` links + `text` names)
    and what animates on which word.
-2. **The tab itself** (`slide` scene) with camera focus, when it has no chart worth rebuilding (tables, maps,
-   dense text). A `slide` is never a substitute for a chart that can be rebuilt.
+2. **The tab itself** (`slide` scene) with camera focus, when it has nothing worth rebuilding (maps, images,
+   dense text, very large tables). A `slide` is never a substitute for a chart or table that can be rebuilt.
 3. You may simplify a chart that is too dense for 10–15 s (fewer categories, one series instead of five), but keep
    its type and its highlight, and say so in the table.
 
