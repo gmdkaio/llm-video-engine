@@ -2,6 +2,7 @@
 *.md
 !/README.md
 !/SKILL.md
+!/skill/*.md
 internal/
 
 # Claude Code settings
@@ -12,12 +13,25 @@ themes/private/
 packages/private/
 golden/private/
 examples/hartbau.json
+examples/svgs.js
 *.mp4
 *.mp3
+
+# Example plans stay local until the showcase example (plan + video) is ready
+examples/**/*.json
+
+# Renders, previews and captures (grids, frames, deck tabs). Add a `!path` exception
+# for an image that belongs in the repo (e.g. a README screenshot).
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
 
 # Build output
 build/
 out/
+node_modules/
 vcpkg_installed/
 CMakeUserPresets.json
 

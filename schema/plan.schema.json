@@ -1,0 +1,1595 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "llm-video-engine/plan@1",
+ "title": "llm-video-engine render plan",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema",
+  "theme",
+  "scenes"
+ ],
+ "properties": {
+  "schema": {
+   "const": "llm-video-engine/plan@1"
+  },
+  "output": {
+   "type": "string"
+  },
+  "config": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "locale": {
+     "type": "string"
+    },
+    "formats": {
+     "type": "array",
+     "items": {
+      "enum": [
+       "1080",
+       "720"
+      ]
+     },
+     "minItems": 1
+    },
+    "target_duration": {
+     "type": [
+      "number",
+      "null"
+     ]
+    }
+   }
+  },
+  "theme": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "bg",
+    "text",
+    "accent",
+    "good",
+    "bad",
+    "warn"
+   ],
+   "properties": {
+    "bg": {
+     "$ref": "#/$defs/color"
+    },
+    "text": {
+     "$ref": "#/$defs/color"
+    },
+    "accent": {
+     "$ref": "#/$defs/color"
+    },
+    "good": {
+     "$ref": "#/$defs/color"
+    },
+    "bad": {
+     "$ref": "#/$defs/color"
+    },
+    "warn": {
+     "$ref": "#/$defs/color"
+    },
+    "panel": {
+     "$ref": "#/$defs/color"
+    },
+    "blue": {
+     "$ref": "#/$defs/color"
+    }
+   }
+  },
+  "logos": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "brand": {
+     "type": "string"
+    },
+    "brand_mark": {
+     "type": "string"
+    },
+    "client": {
+     "type": "string"
+    },
+    "client_color": {
+     "$ref": "#/$defs/color"
+    },
+    "client_scale": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "brand_reveal": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 1
+    }
+   }
+  },
+  "header": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "period": {
+     "type": "string"
+    }
+   }
+  },
+  "scenes": {
+   "type": "array",
+   "minItems": 1,
+   "items": {
+    "$ref": "#/$defs/scene"
+   }
+  }
+ },
+ "$defs": {
+  "color": {
+   "type": "string",
+   "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+  },
+  "tone": {
+   "enum": [
+    "accent",
+    "good",
+    "bad",
+    "warn",
+    "neutral",
+    "blue",
+    "text"
+   ]
+  },
+  "format": {
+   "enum": [
+    "k",
+    "mil",
+    "mi",
+    "pct",
+    "x",
+    "days",
+    "num"
+   ]
+  },
+  "at": {
+   "oneOf": [
+    {
+     "type": "number"
+    },
+    {
+     "type": "string",
+     "minLength": 1
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "word"
+     ],
+     "properties": {
+      "word": {
+       "type": "string"
+      },
+      "n": {
+       "type": "integer",
+       "minimum": 1
+      },
+      "offset": {
+       "type": "number"
+      },
+      "default": {
+       "type": "number"
+      }
+     }
+    }
+   ]
+  },
+  "strings": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "numbers": {
+   "type": "array",
+   "items": {
+    "type": "number"
+   }
+  },
+  "indices": {
+   "type": "array",
+   "items": {
+    "type": "integer",
+    "minimum": 0
+   }
+  },
+  "y": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "min": {
+     "type": "number"
+    },
+    "max": {
+     "type": "number"
+    },
+    "step": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "divide": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "decimals": {
+     "type": "integer"
+    },
+    "suffix": {
+     "type": "string"
+    }
+   }
+  },
+  "split": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "after"
+   ],
+   "properties": {
+    "after": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "labels": {
+     "$ref": "#/$defs/strings"
+    }
+   }
+  },
+  "chip": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "text"
+   ],
+   "properties": {
+    "text": {
+     "type": "string"
+    },
+    "tone": {
+     "$ref": "#/$defs/tone"
+    },
+    "at": {
+     "$ref": "#/$defs/at"
+    }
+   }
+  },
+  "float": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "anchor": {
+     "enum": [
+      "top-left",
+      "top-right",
+      "bottom-left",
+      "bottom-right"
+     ]
+    },
+    "x": {
+     "type": "number"
+    },
+    "y": {
+     "type": "number"
+    },
+    "w": {
+     "type": "number"
+    }
+   }
+  },
+  "scene": {
+   "type": "object",
+   "required": [
+    "type"
+   ],
+   "properties": {
+    "type": {
+     "enum": [
+      "intro",
+      "outro",
+      "slide",
+      "content"
+     ]
+    }
+   },
+   "allOf": [
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "intro"
+       }
+      }
+     },
+     "then": {
+      "properties": {
+       "type": {
+        "const": "intro"
+       },
+       "speech": {
+        "type": "string"
+       },
+       "sub": {
+        "type": "string"
+       },
+       "duration": {
+        "type": "number"
+       }
+      },
+      "additionalProperties": false
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "outro"
+       }
+      }
+     },
+     "then": {
+      "properties": {
+       "type": {
+        "const": "outro"
+       },
+       "text": {
+        "type": "string"
+       },
+       "speech": {
+        "type": "string"
+       },
+       "duration": {
+        "type": "number"
+       }
+      },
+      "additionalProperties": false
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "slide"
+       }
+      }
+     },
+     "then": {
+      "properties": {
+       "type": {
+        "const": "slide"
+       },
+       "tab": {
+        "type": "string"
+       },
+       "speech": {
+        "type": "string"
+       },
+       "image": {
+        "type": "string"
+       },
+       "focus": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "required": [
+          "bbox"
+         ],
+         "properties": {
+          "bbox": {
+           "$ref": "#/$defs/numbers"
+          },
+          "callout": {
+           "type": "string"
+          },
+          "at": {
+           "$ref": "#/$defs/at"
+          }
+         }
+        }
+       }
+      },
+      "required": [
+       "image"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "content"
+       }
+      }
+     },
+     "then": {
+      "properties": {
+       "type": {
+        "const": "content"
+       },
+       "tab": {
+        "type": "string"
+       },
+       "speech": {
+        "type": "string"
+       },
+       "kicker": {
+        "$ref": "#/$defs/strings"
+       },
+       "title": {
+        "type": "string"
+       },
+       "highlight": {
+        "type": "string"
+       },
+       "chip": {
+        "$ref": "#/$defs/chip"
+       },
+       "body": {
+        "$ref": "#/$defs/node"
+       }
+      },
+      "required": [
+       "speech",
+       "body"
+      ],
+      "additionalProperties": false
+     }
+    }
+   ]
+  },
+  "node": {
+   "if": {
+    "required": [
+     "type"
+    ]
+   },
+   "then": {
+    "$ref": "#/$defs/component"
+   },
+   "else": {
+    "$ref": "#/$defs/box"
+   }
+  },
+  "box": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "items"
+   ],
+   "properties": {
+    "dir": {
+     "enum": [
+      "row",
+      "column"
+     ]
+    },
+    "gap": {
+     "type": "number"
+    },
+    "size": {
+     "type": "number"
+    },
+    "grow": {
+     "type": "number"
+    },
+    "panel": {
+     "oneOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "object",
+       "additionalProperties": false,
+       "properties": {
+        "title": {
+         "type": "string"
+        },
+        "sub": {
+         "type": "string"
+        }
+       }
+      }
+     ]
+    },
+    "at": {
+     "$ref": "#/$defs/at"
+    },
+    "items": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/node"
+     }
+    }
+   }
+  },
+  "component": {
+   "type": "object",
+   "required": [
+    "type"
+   ],
+   "properties": {
+    "type": {
+     "enum": [
+      "number",
+      "text",
+      "chips",
+      "kv",
+      "list",
+      "bars",
+      "lines",
+      "stackbar",
+      "ruler",
+      "meter",
+      "rings",
+      "gauge",
+      "flow",
+      "calendar",
+      "threshold",
+      "callout",
+      "bracket",
+      "note"
+     ]
+    }
+   },
+   "allOf": [
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "number"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "value"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "value": {
+        "type": "number"
+       },
+       "format": {
+        "$ref": "#/$defs/format"
+       },
+       "decimals": {
+        "type": "integer"
+       },
+       "prefix": {
+        "type": "string"
+       },
+       "suffix": {
+        "type": "string"
+       },
+       "font": {
+        "type": "number"
+       },
+       "tone": {
+        "$ref": "#/$defs/tone"
+       },
+       "dur": {
+        "type": "number"
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "text"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "text": {
+        "type": "string"
+       },
+       "font": {
+        "type": "number"
+       },
+       "tone": {
+        "enum": [
+         "text",
+         "text2",
+         "text3",
+         "accent"
+        ]
+       },
+       "width": {
+        "type": "number"
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "chips"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "items"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "items": {
+        "type": "array",
+        "items": {
+         "$ref": "#/$defs/chip"
+        }
+       },
+       "dir": {
+        "enum": [
+         "row",
+         "column"
+        ]
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "kv"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "rows"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "title": {
+        "type": "string"
+       },
+       "rows": {
+        "type": "array",
+        "items": {
+         "$ref": "#/$defs/strings"
+        }
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "list"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "items"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "numbered": {
+        "type": "boolean"
+       },
+       "items": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "required": [
+          "title"
+         ],
+         "properties": {
+          "title": {
+           "type": "string"
+          },
+          "text": {
+           "type": "string"
+          },
+          "at": {
+           "$ref": "#/$defs/at"
+          }
+         }
+        }
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "bars"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "cats",
+       "values"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "cats": {
+        "$ref": "#/$defs/strings"
+       },
+       "values": {
+        "$ref": "#/$defs/numbers"
+       },
+       "highlight": {
+        "oneOf": [
+         {
+          "$ref": "#/$defs/indices"
+         },
+         {
+          "const": "last"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "projection": {
+        "$ref": "#/$defs/indices"
+       },
+       "ref": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "values"
+        ],
+        "properties": {
+         "values": {
+          "$ref": "#/$defs/numbers"
+         },
+         "at": {
+          "$ref": "#/$defs/at"
+         }
+        }
+       },
+       "labels": {
+        "type": "boolean"
+       },
+       "label_divide": {
+        "type": "number"
+       },
+       "label_decimals": {
+        "type": "integer"
+       },
+       "stack": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "values"
+        ],
+        "properties": {
+         "values": {
+          "$ref": "#/$defs/numbers"
+         },
+         "tone": {
+          "$ref": "#/$defs/tone"
+         },
+         "label": {
+          "type": "string"
+         },
+         "at": {
+          "$ref": "#/$defs/at"
+         }
+        }
+       },
+       "focus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "idx"
+        ],
+        "properties": {
+         "idx": {
+          "type": "integer"
+         },
+         "at": {
+          "$ref": "#/$defs/at"
+         }
+        }
+       },
+       "split": {
+        "$ref": "#/$defs/split"
+       },
+       "axis": {
+        "type": "boolean"
+       },
+       "color": {
+        "enum": [
+         "accent",
+         "neutral"
+        ]
+       },
+       "y": {
+        "$ref": "#/$defs/y"
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "lines"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "cats",
+       "series"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "cats": {
+        "$ref": "#/$defs/strings"
+       },
+       "series": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "required": [
+          "values"
+         ],
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "name": {
+           "type": "string"
+          },
+          "values": {
+           "$ref": "#/$defs/numbers"
+          },
+          "tone": {
+           "$ref": "#/$defs/tone"
+          }
+         }
+        }
+       },
+       "actual_until": {
+        "type": "integer"
+       },
+       "actual_label": {
+        "type": "string"
+       },
+       "split": {
+        "$ref": "#/$defs/split"
+       },
+       "zero": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+         "label": {
+          "type": "string"
+         },
+         "at": {
+          "$ref": "#/$defs/at"
+         }
+        }
+       },
+       "at_series": {
+        "$ref": "#/$defs/at"
+       },
+       "y": {
+        "$ref": "#/$defs/y"
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "stackbar"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "items"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "items": {
+        "type": "array",
+        "items": {
+         "type": "array"
+        }
+       },
+       "max": {
+        "type": "number"
+       },
+       "target": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+         "value": {
+          "type": "number"
+         },
+         "label": {
+          "type": "string"
+         }
+        }
+       },
+       "end_label": {
+        "type": "string"
+       },
+       "note": {
+        "type": "string"
+       },
+       "label_divide": {
+        "type": "number"
+       },
+       "label_decimals": {
+        "type": "integer"
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "ruler"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "rows"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "rows": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "required": [
+          "label",
+          "value",
+          "target"
+         ],
+         "properties": {
+          "label": {
+           "type": "string"
+          },
+          "sub": {
+           "type": "string"
+          },
+          "value": {
+           "type": "number"
+          },
+          "target": {
+           "type": "number"
+          },
+          "format": {
+           "$ref": "#/$defs/format"
+          },
+          "decimals": {
+           "type": "integer"
+          },
+          "target_label": {
+           "type": "string"
+          },
+          "tag": {
+           "type": "string"
+          },
+          "at": {
+           "$ref": "#/$defs/at"
+          }
+         }
+        }
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "meter"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "value",
+       "max"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "label": {
+        "type": "string"
+       },
+       "value": {
+        "type": "number"
+       },
+       "max": {
+        "type": "number"
+       },
+       "marker": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+         "value": {
+          "type": "number"
+         },
+         "label": {
+          "type": "string"
+         }
+        }
+       },
+       "value_label": {
+        "type": "string"
+       },
+       "note": {
+        "type": "string"
+       },
+       "tone": {
+        "$ref": "#/$defs/tone"
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "rings"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "rings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "rings": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "required": [
+          "pct"
+         ],
+         "properties": {
+          "pct": {
+           "type": "number"
+          },
+          "label": {
+           "type": "string"
+          },
+          "center": {
+           "type": "string"
+          },
+          "center_sub": {
+           "type": "string"
+          },
+          "at": {
+           "$ref": "#/$defs/at"
+          }
+         }
+        }
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "gauge"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "from",
+       "to"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "min": {
+        "type": "number"
+       },
+       "max": {
+        "type": "number"
+       },
+       "bands": {
+        "type": "array",
+        "items": {
+         "type": "array"
+        }
+       },
+       "ticks": {
+        "$ref": "#/$defs/numbers"
+       },
+       "tick_suffix": {
+        "type": "string"
+       },
+       "from": {
+        "type": "number"
+       },
+       "to": {
+        "type": "number"
+       },
+       "decimals": {
+        "type": "integer"
+       },
+       "suffix": {
+        "type": "string"
+       },
+       "from_label": {
+        "type": "string"
+       },
+       "to_label": {
+        "type": "string"
+       },
+       "chips": {
+        "type": "array",
+        "items": {
+         "$ref": "#/$defs/chip"
+        }
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "flow"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "sources",
+       "outputs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "sources": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "total",
+         "parts"
+        ],
+        "properties": {
+         "label": {
+          "type": "string"
+         },
+         "total": {
+          "type": "number"
+         },
+         "parts": {
+          "type": "array",
+          "items": {
+           "type": "array"
+          }
+         }
+        }
+       },
+       "leftover": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+         "value": {
+          "type": "number"
+         },
+         "label": {
+          "type": "string"
+         }
+        }
+       },
+       "outputs": {
+        "type": "array",
+        "items": {
+         "type": "array"
+        }
+       },
+       "tank": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "from",
+         "to",
+         "max"
+        ],
+        "properties": {
+         "label": {
+          "type": "string"
+         },
+         "from": {
+          "type": "number"
+         },
+         "to": {
+          "type": "number"
+         },
+         "max": {
+          "type": "number"
+         },
+         "sub": {
+          "type": "string"
+         },
+         "sub2": {
+          "type": "string"
+         },
+         "format": {
+          "$ref": "#/$defs/format"
+         },
+         "decimals": {
+          "type": "integer"
+         },
+         "divide": {
+          "type": "number"
+         },
+         "at": {
+          "$ref": "#/$defs/at"
+         }
+        }
+       },
+       "highlight": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+         "text": {
+          "type": "string"
+         },
+         "at": {
+          "$ref": "#/$defs/at"
+         }
+        }
+       },
+       "at_flow": {
+        "$ref": "#/$defs/at"
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "calendar"
+       }
+      }
+     },
+     "then": {
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "band": {
+        "type": "string"
+       },
+       "day": {
+        "type": "string"
+       },
+       "month": {
+        "type": "string"
+       },
+       "time": {
+        "type": "string"
+       },
+       "sub": {
+        "type": "string"
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "threshold"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "target",
+       "value"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "target": {
+        "type": "string"
+       },
+       "value": {
+        "type": "number"
+       },
+       "label": {
+        "type": "string"
+       },
+       "tone": {
+        "$ref": "#/$defs/tone"
+       },
+       "style": {
+        "enum": [
+         "water",
+         "line"
+        ]
+       },
+       "recolor": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+         "above": {
+          "$ref": "#/$defs/tone"
+         },
+         "below": {
+          "$ref": "#/$defs/tone"
+         }
+        }
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "callout"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "target",
+       "idx",
+       "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "target": {
+        "type": "string"
+       },
+       "idx": {
+        "type": "integer"
+       },
+       "series": {
+        "type": "string"
+       },
+       "value": {
+        "type": "number"
+       },
+       "text": {
+        "type": "string"
+       },
+       "tone": {
+        "$ref": "#/$defs/tone"
+       },
+       "shape": {
+        "enum": [
+         "pill",
+         "diamond"
+        ]
+       },
+       "place": {
+        "enum": [
+         "above",
+         "left"
+        ]
+       },
+       "pulse": {
+        "type": "boolean"
+       },
+       "ping": {
+        "type": "boolean"
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "bracket"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "target",
+       "from",
+       "to",
+       "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "target": {
+        "type": "string"
+       },
+       "from": {
+        "type": "integer"
+       },
+       "to": {
+        "type": "integer"
+       },
+       "text": {
+        "type": "string"
+       },
+       "tone": {
+        "$ref": "#/$defs/tone"
+       },
+       "shade": {
+        "type": "boolean"
+       },
+       "place": {
+        "enum": [
+         "top",
+         "bars"
+        ]
+       }
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "type": {
+        "const": "note"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "target",
+       "idx",
+       "lines"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "type": true,
+       "id": true,
+       "at": true,
+       "size": true,
+       "grow": true,
+       "float": true,
+       "target": {
+        "type": "string"
+       },
+       "idx": {
+        "type": "integer"
+       },
+       "lines": {
+        "$ref": "#/$defs/strings"
+       },
+       "tone": {
+        "$ref": "#/$defs/tone"
+       }
+      }
+     }
+    }
+   ]
+  }
+ }
+}

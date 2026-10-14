@@ -8,20 +8,25 @@ find_package(unofficial-skia CONFIG REQUIRED)
 find_package(harfbuzz CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
-add_executable(spike
-  src/spike_main.cpp
+add_executable(llm-video-engine
+  src/main.cpp
   src/render/graph.cpp
+  src/render/image.cpp
   src/render/text.cpp
-  src/scenes/kpi.cpp
+  src/scenes/frame.cpp
+  src/scenes/components.cpp
   src/encode/pipe.cpp
 )
-target_include_directories(spike PRIVATE src)
-target_link_libraries(spike PRIVATE
+target_include_directories(llm-video-engine PRIVATE src)
+target_link_libraries(llm-video-engine PRIVATE
   unofficial::skia::skia
+  unofficial::skia::modules::svg
   harfbuzz::harfbuzz
   nlohmann_json::nlohmann_json
 )
+target_compile_definitions(llm-video-engine PRIVATE
+  LVE_DEFAULT_FONT="${CMAKE_CURRENT_SOURCE_DIR}/../themes/default/Montserrat-VF.ttf")
 if(MSVC)
-  target_compile_options(spike PRIVATE /W3 /utf-8 /permissive-)
-  target_compile_definitions(spike PRIVATE NOMINMAX _CRT_SECURE_NO_WARNINGS)
+  target_compile_options(llm-video-engine PRIVATE /W3 /utf-8 /permissive-)
+  target_compile_definitions(llm-video-engine PRIVATE NOMINMAX _CRT_SECURE_NO_WARNINGS _USE_MATH_DEFINES)
 endif()
