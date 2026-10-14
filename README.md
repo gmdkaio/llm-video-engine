@@ -9,8 +9,106 @@ network involved.
 
 Early. The engine renders plans written in the `llm-video-engine/plan@1` format
 (`schema/plan.schema.json`, documented in `skill/COMPONENTS.md`), and the skill
-in `skill/` analyzes a deck and writes such a plan. Narration audio, vertical
-video and the slide-camera scene are not built yet.
+in `skill/` analyzes a deck and writes such a plan. Narration audio and vertical
+video are not built yet.
+
+## Charts
+
+There is no fixed list of chart types. A chart in the plan is layers of marks
+(bars, lines, areas, rects, rules, points, texts, arcs, ribbons, paths), so the
+LLM can rebuild whatever chart the deck has with its own data and highlight.
+Some of them, rendered by the engine from fictitious plans:
+
+<!-- charts:start -->
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src=".github/assets/charts/waterfall.gif" alt="Waterfall" width="100%"><br>
+<b>Waterfall</b><br>
+From opening to closing balance, step by step; the biggest drops dim the rest.
+</td>
+<td width="50%" valign="top">
+<img src=".github/assets/charts/combo.gif" alt="Bars, cumulative line and target" width="100%"><br>
+<b>Bars, cumulative line and target</b><br>
+Daily bars, the running total drawn over them, a dashed projection and the target rising into place.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src=".github/assets/charts/stacked.gif" alt="Stacked bars" width="100%"><br>
+<b>Stacked bars</b><br>
+Series pile up per category with the deck's own shades and a legend.
+</td>
+<td width="50%" valign="top">
+<img src=".github/assets/charts/scenarios.gif" alt="Scenario lines" width="100%"><br>
+<b>Scenario lines</b><br>
+One line per scenario, threshold rules and labels at the line ends.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src=".github/assets/charts/donut.gif" alt="Donut" width="100%"><br>
+<b>Donut</b><br>
+Arcs sweep in order and the center counts up to the share that matters.
+</td>
+<td width="50%" valign="top">
+<img src=".github/assets/charts/gauge.gif" alt="Gauge" width="100%"><br>
+<b>Gauge</b><br>
+Colored bands, a needle that swings from last value to this one, and a counter.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src=".github/assets/charts/flow.gif" alt="Flow (Sankey)" width="100%"><br>
+<b>Flow (Sankey)</b><br>
+Inflow split into ribbons that curve to each outflow, and what is left over.
+</td>
+<td width="50%" valign="top">
+<img src=".github/assets/charts/dual-axis.gif" alt="Dual axis" width="100%"><br>
+<b>Dual axis</b><br>
+Bars on the left scale, a percentage line on its own scale on the right.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src=".github/assets/charts/radar.gif" alt="Radar" width="100%"><br>
+<b>Radar</b><br>
+Two profiles over the same axes, filled shape growing from the center.
+</td>
+<td width="50%" valign="top">
+<img src=".github/assets/charts/scatter.gif" alt="Scatter and bubbles" width="100%"><br>
+<b>Scatter and bubbles</b><br>
+Points on two value scales, bubble size per point, and a ping on the outlier.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src=".github/assets/charts/heatmap.gif" alt="Heatmap" width="100%"><br>
+<b>Heatmap</b><br>
+One cell per pair, intensity as opacity, rows labelled on the left.
+</td>
+<td width="50%" valign="top">
+<img src=".github/assets/charts/gantt.gif" alt="Gantt" width="100%"><br>
+<b>Gantt</b><br>
+Horizontal bars from start to end per task, and a rule for today.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src=".github/assets/charts/funnel.gif" alt="Funnel" width="100%"><br>
+<b>Funnel</b><br>
+Closed shapes narrowing stage by stage, with the counts inside.
+</td>
+<td width="50%" valign="top">
+<img src=".github/assets/charts/bullet.gif" alt="Bullet" width="100%"><br>
+<b>Bullet</b><br>
+Value against its ranges and target, one row per metric.
+</td>
+</tr>
+</table>
+<!-- charts:end -->
+
+The GIFs come from `node tools/readme_charts.mjs`.
 
 ## How it is used
 

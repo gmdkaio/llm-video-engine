@@ -42,3 +42,6 @@ CMakeUserPresets.json
 .idea/
 Thumbs.db
 .DS_Store
+
+# README chart animations (tools/readme_charts.mjs)
+!/.github/assets/charts/*.gif
