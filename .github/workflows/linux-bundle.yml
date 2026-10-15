@@ -53,7 +53,7 @@ jobs:
             --enable-gpl --enable-libx264 --enable-zlib --enable-ffmpeg --enable-ffprobe \
             --enable-protocol=file,pipe,fd \
             --enable-demuxer=rawvideo,image2,png_pipe,mjpeg,mov \
-            --enable-parser=png,mjpeg,h264 \
+            --enable-parser=png,mjpeg \
             --enable-decoder=rawvideo,png,mjpeg \
             --enable-encoder=libx264,png,mjpeg,rawvideo \
             --enable-muxer=mp4,image2,rawvideo,null \
