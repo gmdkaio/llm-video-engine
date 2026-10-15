@@ -51,7 +51,7 @@ jobs:
             --prefix="$PWD/../ffout" --pkg-config-flags=--static --extra-ldflags=-static \
             --disable-everything --disable-autodetect --disable-doc --disable-debug --disable-network --disable-shared --enable-static \
             --enable-gpl --enable-libx264 --enable-zlib --enable-ffmpeg --enable-ffprobe \
-            --enable-protocol=file,pipe \
+            --enable-protocol=file,pipe,fd \
             --enable-demuxer=rawvideo,image2,png_pipe,mjpeg \
             --enable-parser=png,mjpeg \
             --enable-decoder=rawvideo,png,mjpeg \
