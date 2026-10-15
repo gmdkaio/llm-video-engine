@@ -24,6 +24,13 @@ const walk = (dir) => {
 walk('skill/scripts');
 add('schema/plan.schema.json', 'schema/plan.schema.json');
 
+// Linux engine bundle built by .github/workflows/linux-bundle.yml (gh run download -n linux-x64 -D dist/linux-x64).
+// Without it the zip is plan-only and the skill falls back to delivering video-plan.zip.
+const bundle = path.join(root, 'dist/linux-x64');
+if (fs.existsSync(path.join(bundle, 'llm-video-engine'))) {
+  for (const f of ['llm-video-engine', 'ffmpeg', 'ffprobe', 'fonts/Montserrat-VF.ttf', 'fonts/OFL.txt']) add(`dist/linux-x64/${f}`, `bin/linux-x64/${f}`);
+} else console.warn('warning: dist/linux-x64 not found, building a plan-only skill');
+
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
 const out = path.join(root, 'dist', `${name}-skill.zip`);
 writeZip(out, entries);

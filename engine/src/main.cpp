@@ -71,6 +71,37 @@ fs::path extractZip(const fs::path& zip) {
     return dir;
 }
 
+// Folder of the running executable (for the bundled font in a release package).
+fs::path exeDir() {
+#ifdef _WIN32
+    wchar_t buf[MAX_PATH];
+    const DWORD n = GetModuleFileNameW(nullptr, buf, MAX_PATH);
+    return n ? fs::path(std::wstring(buf, n)).parent_path() : fs::path();
+#else
+    std::error_code ec;
+    return fs::read_symlink("/proc/self/exe", ec).parent_path();
+#endif
+}
+
+// The default font: next to the exe in a release package, else the source tree it was built from.
+std::string defaultFont() {
+    for (const fs::path& p : {exeDir() / "fonts" / "Montserrat-VF.ttf", exeDir() / "Montserrat-VF.ttf"})
+        if (fs::exists(p)) return u8(p);
+    return LVE_DEFAULT_FONT;
+}
+
+// ffmpeg must be on PATH for every command that writes an image or video.
+void requireFfmpeg() {
+#ifdef _WIN32
+    const int rc = std::system("ffmpeg -version >NUL 2>&1");
+#else
+    const int rc = std::system("ffmpeg -version >/dev/null 2>&1");
+#endif
+    if (rc != 0)
+        throw std::runtime_error("ffmpeg was not found on PATH. Install it (Windows: winget install Gyan.FFmpeg), "
+                                 "then open a new terminal.");
+}
+
 std::string safeName(std::string s) {
     for (auto& ch : s)
         if (std::string("<>:\"/\\|?*").find(ch) != std::string::npos) ch = '-';
@@ -83,13 +114,33 @@ int main(int argc, char** argv) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);  // messages are UTF-8 (the "·" separators, accented words)
 #endif
+    // A release package ships ffmpeg and ffprobe next to the exe: look there first.
+    if (const fs::path dir = exeDir(); !dir.empty()) {
+        const char* old = std::getenv("PATH");
+#ifdef _WIN32
+        _putenv_s("PATH", (u8(dir) + ";" + (old ? old : "")).c_str());
+#else
+        setenv("PATH", (u8(dir) + ":" + (old ? old : "")).c_str(), 1);
+#endif
+    }
+    // A release package ships ffmpeg and ffprobe next to the exe: look there first.
+    if (const fs::path dir = exeDir(); !dir.empty()) {
+        const char* old = std::getenv("PATH");
+#ifdef _WIN32
+        _putenv_s("PATH", (u8(dir) + ";" + (old ? old : "")).c_str());
+#else
+        setenv("PATH", (u8(dir) + ":" + (old ? old : "")).c_str(), 1);
+#endif
+    }
+    if (argc == 2 && std::string(argv[1]) == "--version") { std::cout << "llm-video-engine " LVE_VERSION "\n"; return 0; }
     if (argc < 3) {
-        std::cerr << "usage: llm-video-engine (render|grid|frame|validate) plan.json|video-plan.zip [--out path] [--at t] [--threads N] [--font f.ttf] [--null]\n";
+        std::cerr << "llm-video-engine " LVE_VERSION "\n"
+                  << "usage:llm-video-engine (render|grid|frame|validate) plan.json|video-plan.zip [--out path] [--at t] [--threads N] [--font f.ttf] [--null]\n";
         return 2;
     }
     const std::string cmd = argv[1];
     const fs::path input = fs::u8path(argv[2]);
-    std::string out, font = LVE_DEFAULT_FONT;
+    std::string out, font = defaultFont();
     int threads = (int)std::thread::hardware_concurrency();
     float atT = -1;
     bool null = false;
@@ -132,6 +183,7 @@ int main(int argc, char** argv) {
             return report.empty() ? 0 : 1;
         }
         for (const auto& w : video.warnings) std::cerr << "warning: " << w << "\n";
+        if (!null) requireFfmpeg();
         const double setup = secondsSince(t0);
         const std::string stem = safeName(plan.value("output", u8(planPath.stem())));
 

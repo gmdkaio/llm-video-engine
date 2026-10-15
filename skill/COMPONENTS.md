@@ -92,6 +92,13 @@ box and a column box.
 Common keys: `type`, `id`, `at`, `size`, `grow`, `float`.
 Number formats (`format`): `k`, `mil`, `mi`, `pct`, `x`, `days`, `num`, with `decimals`, `divide`, `prefix`,
 `suffix`, `sign` (shows `+`).
+**`format` only adds the unit label, it never scales the number**: `mil` prints the value as given plus " mil",
+`mi` plus " mi". So R$ 441.954 is `"value": 441954, "format": "mil", "divide": 1000` (prints "R$ 442 mil"), or
+`"value": 442` with `"format": "mil"`. Without `divide`, `441954` prints "R$ 441.954 mil" and overflows the card.
+Same for `mi`: `"value": 2310000, "format": "mi", "divide": 1000000, "decimals": 2` → "R$ 2,31 mi". A `kpi` value
+shows at most about 8 characters in a card of 4 across; check the printed width before writing the plan.
+**`k`, `mil` and `mi` already print the currency** ("R$ " in pt-BR, "$" in en-US): never add `"prefix": "R$ "`
+to them, or the card shows "R$ R$ 442 mil". `prefix` is for `num`/`pct`/`days` values that need a symbol.
 
 | type | fields |
 |---|---|

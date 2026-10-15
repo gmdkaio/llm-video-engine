@@ -1,16 +1,16 @@
 ---
 name: llm-video-engine
-description: "Turns an HTML presentation deck into a render plan for a short narrated video summary. Audits the deck tab by tab, builds the story and the narration script, and writes plan.json (scenes made from components) packaged as video-plan.zip with its assets and the TTS text. The user renders it locally with the llm-video-engine engine. Use when asked for a video summary, a narrated video, or an animated recap of an HTML deck or report."
+description: "Turns an HTML presentation deck into a render plan for a short narrated video summary. Audits the deck tab by tab, builds the story and the narration script, and writes plan.json (scenes made from components) rendered to MP4 right here with the bundled Linux engine (bin/linux-x64), and also packaged as video-plan.zip with its assets and the TTS text for local re-renders. Use when asked for a video summary, a narrated video, or an animated recap of an HTML deck or report."
 ---
 
 # llm-video-engine: deck → video plan
 
 Input: an HTML presentation (tabs or a long page). Output: **`video-plan.zip`**, holding `plan.json`
 (schema `llm-video-engine/plan@1`), the logos and images it references, and `narration.txt` (the TTS text).
-The user renders the zip on their own machine with the local engine, which draws every frame natively.
+The engine in `bin/linux-x64/` draws every frame natively (no browser, no HTML recreation) and encodes with its own
+ffmpeg, so the whole job fits in one chat: plan, check, render, deliver the MP4.
 
-**You stop at the zip. Never render, preview or encode video here**: no screenshots of scenes, no HTML
-recreations, no ffmpeg. That work belongs to the local engine and costs time and tokens here.
+**Render only with that engine.** Never screenshot scenes, rebuild them in HTML or call any other ffmpeg.
 
 You decide **what** the video says and shows. You never write drawing code: each scene is a layout of components,
 and every chart is described as layers of marks (bars, lines, areas, rects, rules, points, texts, arcs, ribbons,
@@ -35,6 +35,7 @@ schema/plan.schema.json          the plan contract
 scripts/analyze_deck.mjs         deck → analysis.json, inventory.md, tab_NN.png, grid.jpg, logo_N
 scripts/validate_plan.mjs        schema + `at` words + referenced files (no dependencies)
 scripts/package_plan.mjs         validates, then writes video-plan.zip
+bin/linux-x64/                   llm-video-engine, ffmpeg, ffprobe, fonts/ (self-contained, no install)
 ```
 Find the skill folder first (the `<skill>` below): the folder that holds this SKILL.md and `scripts/`.
 If `scripts/` or `COMPONENTS.md` is missing, the skill was installed without its files: tell the user to upload
@@ -110,6 +111,9 @@ sentences.
 Before packaging, check by hand:
 - every number on screen is in the deck, with the same rounding
 - titles fit on one line (about 60 characters with the highlight)
+- every `kpi`/`table` value in `mil` or `mi` has `divide` (1000 or 1000000) when the raw number is in reais:
+  `format` adds only the unit label, it does not scale (see `COMPONENTS.md`); short values, 8 characters or fewer;
+  no `prefix: "R$ "` on `k`/`mil`/`mi`, which already print the currency
 - chart `y` scales: round steps, labels with the right decimals, every value inside the scale (or leave `y`
   out and let the engine pick)
 - each chart has the deck's highlight, colors and annotations
@@ -122,22 +126,36 @@ It reports schema errors, `at` regexes that match no word of the speech, referen
 `DURATION` when the estimated video is more than 15% off `target_duration` (it says how many words to cut or
 add; the estimate is the engine's own). It prints the estimated length with `plan ok`.
 
-### 7. Package and deliver
+### 7. Check, render, package and deliver
+The engine is self-contained. Once per session:
 ```bash
-node <skill>/scripts/package_plan.mjs <work>/plan.json --narration <work>/narration.txt --out <outputs>/video-plan.zip
+E=<skill>/bin/linux-x64/llm-video-engine; chmod +x <skill>/bin/linux-x64/*; $E --version
 ```
-Deliver `video-plan.zip` and, in the message, the TTS text, any deck visual that was not reproduced exactly
-(and why), and these local commands:
-```
-llm-video-engine validate video-plan.zip   # layout check, one line per problem
-llm-video-engine grid video-plan.zip       # one frame per scene, to look at before rendering
-llm-video-engine render video-plan.zip     # the MP4, next to the zip
-```
+1. **Layout check**, fix until it prints `plan ok` (lines are the codes in section 8):
+   ```bash
+   $E validate <work>/plan.json
+   ```
+2. **Grid**: one frame per scene (`<work>/<output>_grid.jpg`). Read it, compare each scene with its deck tab, fix and
+   repeat. This is the visual check; it takes seconds.
+3. **Render** (a fraction of the video length on a few cores; run it in the background and poll if the tool has a timeout):
+   ```bash
+   $E render <work>/plan.json --out <outputs>/<name>.mp4 --threads $(nproc)
+   ```
+   With `formats: ["1080","720"]` omit `--out`: both files land next to the plan.
+4. **Package** the plan for local re-renders:
+   ```bash
+   node <skill>/scripts/package_plan.mjs <work>/plan.json --narration <work>/narration.txt --out <outputs>/video-plan.zip
+   ```
+Deliver the MP4(s), `video-plan.zip`, the TTS text and any deck visual that was not reproduced exactly (and why).
+The MP4 has no audio: the TTS text is for the voice-over.
+
+If `bin/linux-x64` is missing or the binary does not start (`ldd` shows what is missing), do not improvise a
+renderer: deliver `video-plan.zip` and tell the user to run `llm-video-engine render video-plan.zip` locally.
 
 ### 8. Fixes from the user
 The user may paste lines from `llm-video-engine validate`, like `scene 4 · OVERLAP · '94%' overlaps '100'` or
 `scene 2 · AT · 'faturou' matches no word of the speech`, or describe what looks wrong in the grid. Fix only the
-scenes named, validate again, and deliver a new zip.
+scenes named, validate again, render again and deliver the new MP4 and zip.
 
 | Code | Meaning | Usual fix |
 |---|---|---|

@@ -1,0 +1,94 @@
+# Builds the Linux x64 bundle that runs inside Claude's sandbox: the engine, a minimal static ffmpeg + ffprobe
+# (x264 only, the formats the engine uses) and the font. The artifact is unpacked into skill/bin/linux-x64
+# by tools/package_skill.mjs.
+name: linux-bundle
+on:
+  workflow_dispatch:
+  push:
+    paths: ['engine/**', 'themes/default/**', '.github/workflows/linux-bundle.yml']
+
+env:
+  FFMPEG_TAG: n7.1.1
+  X264_REF: stable
+
+jobs:
+  bundle:
+    runs-on: ubuntu-22.04   # old glibc, so the binary runs on any current sandbox image
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build nasm pkg-config python3 libfontconfig1-dev libgl1-mesa-dev libglu1-mesa-dev \
+            libx11-dev zlib1g-dev autoconf automake libtool bison
+
+      - name: vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg "$HOME/vcpkg"
+          "$HOME/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$HOME/vcpkg" >> "$GITHUB_ENV"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/vcpkg
+          key: vcpkg-linux-${{ hashFiles('engine/vcpkg.json') }}
+
+      - name: Engine
+        working-directory: engine
+        run: |
+          cmake --preset linux
+          cmake --build --preset linux
+
+      - name: x264 + ffmpeg (minimal, static)
+        run: |
+          git clone --depth 1 --branch "$X264_REF" https://code.videolan.org/videolan/x264.git
+          (cd x264 && ./configure --prefix="$PWD/../deps" --enable-static --disable-cli --disable-opencl --enable-pic && make -j"$(nproc)" && make install)
+          git clone --depth 1 --branch "$FFMPEG_TAG" https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
+          cd ffmpeg-src
+          PKG_CONFIG_PATH="$PWD/../deps/lib/pkgconfig" ./configure \
+            --prefix="$PWD/../ffout" --pkg-config-flags=--static --extra-ldflags=-static \
+            --disable-everything --disable-autodetect --disable-doc --disable-debug --disable-network --disable-shared --enable-static \
+            --enable-gpl --enable-libx264 --enable-zlib --enable-ffmpeg --enable-ffprobe \
+            --enable-protocol=file,pipe \
+            --enable-demuxer=rawvideo,image2,png_pipe,mjpeg \
+            --enable-parser=png,mjpeg \
+            --enable-decoder=rawvideo,png,mjpeg \
+            --enable-encoder=libx264,png,mjpeg,rawvideo \
+            --enable-muxer=mp4,image2,rawvideo,null \
+            --enable-filter=scale,tile,format,null,pad,crop
+          make -j"$(nproc)"
+          make install
+
+      - name: Assemble
+        run: |
+          B=dist/linux-x64
+          mkdir -p "$B/fonts"
+          cp engine/build/linux/llm-video-engine "$B/"
+          cp ffout/bin/ffmpeg ffout/bin/ffprobe "$B/"
+          cp themes/default/Montserrat-VF.ttf themes/default/OFL.txt "$B/fonts/"
+          strip "$B/llm-video-engine" "$B/ffmpeg" "$B/ffprobe"
+          ldd "$B/llm-video-engine" || true
+          ls -l "$B"
+
+      - name: Smoke test in a bare Ubuntu container (no libraries, no ffmpeg)
+        run: |
+          mkdir -p smoke
+          cat > smoke/plan.json <<'JSON'
+          {"schema":"llm-video-engine/plan@1","output":"smoke","config":{"locale":"en-US","formats":["720"]},
+           "theme":{"bg":"#07090D","text":"#FFFFFF","accent":"#5B8CFF","good":"#2BC48A","bad":"#F0605D","warn":"#F2B544","panel":"#10141B"},
+           "header":{"period":"Smoke test"},
+           "scenes":[{"type":"content","tab":"Smoke","speech":"Revenue grew twelve percent over the quarter.","kicker":["Q3","revenue"],
+             "title":"Revenue grew","highlight":"12%","body":{"items":[{"type":"number","value":12,"suffix":"%"}]}}]}
+          JSON
+          docker run --rm -v "$PWD/dist/linux-x64:/b:ro" -v "$PWD/smoke:/w" -w /w ubuntu:22.04 bash -c '
+            /b/llm-video-engine --version && /b/llm-video-engine validate plan.json &&
+            /b/llm-video-engine grid plan.json && /b/llm-video-engine render plan.json &&
+            ls -l /w && /b/ffprobe -v error -show_entries stream=codec_name,width,height,nb_frames -of csv=p=0 /w/smoke.mp4'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: dist/linux-x64
+          if-no-files-found: error
