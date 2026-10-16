@@ -81,6 +81,7 @@ Shaped shape(const Fonts& fonts, const std::string& utf8, const TextStyle& st) {
 
     SkFont font(fonts.face(st.weight), st.size);
     font.setSubpixel(true);
+    font.setBaselineSnap(false);  // subpixel in y too, or slow scale/drift moves make each line hop a pixel
     font.setHinting(SkFontHinting::kNone);
     font.setEdging(SkFont::Edging::kAntiAlias);
 

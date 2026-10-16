@@ -25,10 +25,21 @@ Validate against `schema/plan.schema.json`. Unknown keys are rejected so typos s
 - `motion`: `"classic"` (default) or `"measured"`. Measured uses shorter, decelerating moves for the whole
   video: the title builds word by word, panels and chips land in about 12 frames, counters step once per frame,
   scenes leave on an accelerating exit, the intro logo arrives oversized and dives into the cut, slide focus
-  moves snap and settle, and the page creeps slowly so a hold is never dead. Same plan, no other field changes.
+  moves snap and settle. Holds are perfectly still (no page drift: it made the text shimmer). Same plan, no other field changes.
 - `transition` (measured only): `"slide"` (default) or `"whip"` (whip pans between scenes). Use whips for
   energetic, consumer-style summaries, not for a sober board report.
 - `clock`: `"smooth"` (default) or `"twos"` (every pose held two frames, a hand-animated look).
+- **Motion levels** (the skill asks the user for one; `--shutter` is a render flag, not a plan field):
+
+  | Level | Label to the user | `config` | render flag | Plan |
+  |---|---|---|---|---|
+  | 0 | Calm | none | | any |
+  | 1 | A little | `"motion": "measured"` | | any; camera snaps already apply to `slide` scenes |
+  | 2 | Intermediate | `"motion": "measured", "transition": "whip"` | | at least two `slide` scenes with camera focus, or no camera snap is ever seen |
+  | 3 | Boosted | level 2 | `--shutter 6` | same as level 2; blur makes the render about 2× slower |
+
+  `clock: "twos"` (every pose held two frames, motion at 15 poses/s, a deliberately choppy hand-animated look) is **on hold** until its performance is fixed: the skill does not offer or set it.
+
 - `theme`: six colors are required (`bg`, `text`, `accent`, `good`, `bad`, `warn`); `panel` and `blue` are derived
   when missing. Take them from the deck.
 - `logos`: paths relative to the plan. SVG or PNG. `brand` is the full lockup (intro, outro); `brand_mark` the
@@ -52,6 +63,24 @@ Validate against `schema/plan.schema.json`. Unknown keys are rejected so typos s
 - `title` + `highlight`: the title line; `highlight` is appended in the accent color.
 - `chip`: one chip right-aligned on the title row: `{text, tone, at}`.
 - `body`: the layout box (below). It fills the area under the title: 1224 × 534 logical px.
+- `header`: `false` drops the top bar (logos, tabs, period) for this scene and gives its 46 px to the body
+  (1224 × 580). The bar is on by default for `content`; a video does not need it on every scene, so drop it on
+  the scenes where the chart is the hero.
+- `bleed`: `true` for a full-bleed scene: no top bar, no progress line, a large title (and kicker, chip) in a band across the
+  top, and the body running to the left, right and bottom edges of the frame (1256 × 608). Give the body a single chart
+  and no `panel` (`"panel": false`), so the chart itself is the page. Use it for the hero chart of the story.
+- `camera`: `[{at, target, box: [x, y, w, h], kind, zoom_max, hold}, {at, reset: true}]`, the same camera as `slide`, on the body.
+  A move aims at a **`target`**, the `id` of a box or component in the body (give the box or chart you want to
+  look at an `"id"`), and/or a **`box`**: a region as fractions (0–1) of the target's width and height, or of the whole body
+  when there is no target. Aim with `target` rather than guessing fractions of a body made of several panels: an
+  unknown id is an error. `kind`: `"snap"` (default: one frame then a settle in measured motion, a 1 s ease in classic),
+  `"zoom"` (a smooth 1.4 s push in, for a calmer moment), `"blur"` (a snap with a directional blur along the move) or
+  `"spotlight"` (a snap onto the region, then the rest of the scene blurs and dims while the region stays sharp in
+  place with a thin outline, then the blur lifts and the camera snaps back; default `hold` 3.8 s. Motion level 3 only). `zoom_max`
+  limits the magnification (default 2.2). **Every move returns by itself** after `hold` seconds (default 3; `0` stays) unless
+  another move starts first, and `reset: true` returns earlier. Time a move **after** the element it points at has
+  entered (a chart that is still drawing its lines makes an empty zoom): use an `at` word later than the chart's own `at`.
+  The body is clipped to its area while a camera is set; text that the zoom pushes out is not reported by `validate`.
 
 `slide`: `image` is a `tab_NN.png` copied next to the plan. `focus: [{bbox: [x, y, w, h], callout, at}]`, with the
 bbox in the image's pixels at 1280 px wide (the analyzer's capture size, same as `analysis.json`). The camera zooms

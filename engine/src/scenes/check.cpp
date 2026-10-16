@@ -31,7 +31,10 @@ struct Box {
 
 float val(const Track<float>& tr, float t, float d) { return tr.empty() ? d : tr.eval(t); }
 
-void collect(const Node& n, float t, const Xf& parent, float alpha, const Fonts& fonts, std::vector<Box>& out) {
+// `clipR` is the active clip rectangle in stage coordinates (a camera zoom crops what leaves it on purpose,
+// so text cut by it is not a layout error).
+void collect(const Node& n, float t, const Xf& parent, float alpha, const Fonts& fonts, std::vector<Box>& out,
+             Box clipR = {-1e9f, -1e9f, 1e9f, 1e9f, ""}) {
     alpha *= val(n.opacity, t, 1);
     if (alpha < .05f) return;
     const float s = val(n.scale, t, 1);
@@ -39,6 +42,13 @@ void collect(const Node& n, float t, const Xf& parent, float alpha, const Fonts&
     if (sx == 0 || sy == 0) return;
     if (n.clip && val(n.clipWidth, t, n.clipW) <= 0) return;
     const Xf xf = parent.then(n.x + val(n.tx, t, 0), n.y + val(n.ty, t, 0), n.ox, n.oy, sx, sy);
+    if (n.clip) {
+        const float cw = val(n.clipWidth, t, n.clipW);
+        clipR.l = std::max(clipR.l, xf.dx + xf.sx * n.clipX);
+        clipR.t = std::max(clipR.t, xf.dy + xf.sy * n.clipY);
+        clipR.r = std::min(clipR.r, xf.dx + xf.sx * (n.clipX + cw));
+        clipR.b = std::min(clipR.b, xf.dy + xf.sy * (n.clipY + n.clipH));
+    }
     if (n.kind == NodeKind::Text) {
         std::string str = n.format ? n.format(val(n.value, t, 0)) : n.text;
         const float w = n.blob && !n.format ? n.blobWidth : shape(fonts, str, n.style).width;
@@ -46,11 +56,12 @@ void collect(const Node& n, float t, const Xf& parent, float alpha, const Fonts&
             const float off = n.style.align == Align::Center ? -w / 2 : n.style.align == Align::Right ? -w : 0;
             // Ink box: cap height above the baseline, and descender space only when a letter needs it.
             const bool desc = str.find_first_of("gjpqy,;()[]") != std::string::npos || str.find("\xc3\xa7") != std::string::npos;
-            out.push_back({xf.dx + xf.sx * off, xf.dy - xf.sy * n.style.size * .72f, xf.dx + xf.sx * (off + w),
-                           xf.dy + xf.sy * n.style.size * (desc ? .22f : .02f), str});
+            const Box b{xf.dx + xf.sx * off, xf.dy - xf.sy * n.style.size * .72f, xf.dx + xf.sx * (off + w),
+                        xf.dy + xf.sy * n.style.size * (desc ? .22f : .02f), str};
+            if (b.l >= clipR.l - 1 && b.r <= clipR.r + 1 && b.t >= clipR.t - 1 && b.b <= clipR.b + 1) out.push_back(b);
         }
     }
-    for (const auto& ch : n.children) collect(*ch, t, xf, alpha, fonts, out);
+    for (const auto& ch : n.children) collect(*ch, t, xf, alpha, fonts, out, clipR);
 }
 
 std::string clip(const std::string& s) { return s.size() > 40 ? s.substr(0, 37) + "..." : s; }

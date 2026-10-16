@@ -2,7 +2,10 @@
 // SKILL.md, COMPONENTS.md, the scripts and the plan schema. The repo stays the single source:
 // skill/ for the skill files, schema/ for the schema.
 //
-//   node tools/package_skill.mjs
+//   node tools/package_skill.mjs [--name test-name]
+//
+// --name builds a side-by-side test skill: the folder, the zip and the SKILL.md `name:` all take it, so it
+// installs next to the released skill instead of replacing it.
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,11 +13,14 @@ import { fileURLToPath } from 'node:url';
 import { writeZip } from '../skill/scripts/lib/zip.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const name = 'llm-video-engine';
+const ni = process.argv.indexOf('--name');
+const name = ni > 0 ? process.argv[ni + 1] : 'llm-video-engine';
 const entries = [];
 const add = (src, dst) => entries.push({ name: `${name}/${dst}`, data: fs.readFileSync(path.join(root, src)) });
 
-for (const f of ['SKILL.md', 'COMPONENTS.md', 'package.json']) add(`skill/${f}`, f);
+for (const f of ['COMPONENTS.md', 'package.json']) add(`skill/${f}`, f);
+const skillMd = fs.readFileSync(path.join(root, 'skill/SKILL.md'), 'utf8').replace(/^name: .*$/m, `name: ${name}`);
+entries.unshift({ name: `${name}/SKILL.md`, data: Buffer.from(skillMd) });
 const walk = (dir) => {
   for (const e of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {
     const rel = `${dir}/${e.name}`;

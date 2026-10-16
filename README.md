@@ -184,7 +184,7 @@ whole video to a grammar of shorter, decelerating moves: titles build word by wo
 short directional smear, panels land in about 12 frames instead of fading and bouncing,
 counters step once per frame with steps that shrink, scenes leave on an accelerating exit,
 the intro logo arrives oversized and dives into the cut, slide-scene camera moves snap in
-one frame and settle, and the page creeps so a held frame is never dead.
+one frame and settle; holds are perfectly still.
 `config.transition: "whip"` joins scenes with whip pans, and `config.clock: "twos"` holds
 every pose for two frames, for a hand-posed look. See `skill/COMPONENTS.md`.
 
@@ -312,8 +312,15 @@ What changed, each found by profiling the 12-thread render:
 With x264 the encoder is now the limit; NVENC matches x264's quality on this video
 (SSIM 0.9995 against the earlier output) with files about 1.75x larger.
 
-Not measured yet: LLM tokens, wall-clock time and iterations per video with and
-without the engine.
+### In Claude's sandbox
+
+With the skill's Linux bundle, a real run in claude.ai (a 90 s, 1080p video with narration text) took
+56 s to render. Building the plan, validating it and checking the grid took the remaining 2 min 15 s
+(about 24k tokens), and reading the deck and proposing the scenes before that took 4 to 5 minutes. The skill
+sends the plan (`video-plan.zip`) as soon as it validates and renders afterwards, so the user has something
+in hand while the video renders. `--shutter 6` (the skill's "Boosted" level) roughly doubles the render time.
+
+Not measured yet: LLM tokens and iterations per video with and without the engine, on a fixed task.
 
 ## Layout
 

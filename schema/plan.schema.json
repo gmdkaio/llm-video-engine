@@ -460,6 +460,47 @@
        },
        "body": {
         "$ref": "#/$defs/node"
+       },
+       "header": {
+        "type": "boolean"
+       },
+       "bleed": {
+        "type": "boolean"
+       },
+       "camera": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "properties": {
+          "at": {
+           "$ref": "#/$defs/at"
+          },
+          "box": {
+           "$ref": "#/$defs/numbers"
+          },
+          "zoom_max": {
+           "type": "number"
+          },
+          "kind": {
+           "enum": [
+            "snap",
+            "zoom",
+            "blur",
+            "spotlight"
+           ]
+          },
+          "target": {
+           "type": "string"
+          },
+          "hold": {
+           "type": "number"
+          },
+          "reset": {
+           "type": "boolean"
+          }
+         }
+        }
        }
       },
       "required": [

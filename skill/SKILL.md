@@ -54,13 +54,19 @@ First call:
 3. Formats: 1080p (recommended) · 1080p + 720p · 720p.
 4. Duration: 90 s (recommended) · 60 s · 120 s · free.
 
-Second call (AskUserQuestion takes at most 4 questions), the motion style. Motion is an option, never the default:
-5. Motion: classic (recommended; `motion` left out of `config`) · measured (`"motion": "measured"`: word-by-word titles,
-   fast landings, stepped counters, accelerating exits, snappy camera) · measured + whip transitions
-   (`"transition": "whip"`, energetic, consumer-style) · measured + twos (`"clock": "twos"`, hand-animated look).
-   Describe each in one line; for a sober board report suggest classic or measured, not whip. Details in `COMPONENTS.md`.
+Second call (AskUserQuestion takes at most 4 questions): the motion level. Motion is an option, never the default.
+Never show the user engine words (measured, whip, twos, shutter, snap); use the plain labels and descriptions:
+5. Motion level, 4 options, each with a one-line description a non-technical person understands:
+   - **0 · Calm (recommended)**: smooth fades and slides, the classic look, no extra effects.
+   - **1 · A little**: titles build word by word, panels land fast, counters tick, scenes exit quickly.
+   - **2 · Intermediate**: everything in level 1, plus quick whip-style cuts between scenes. (Camera jumps onto the numbers happen from level 1 on, in scenes that show the deck page itself.)
+   - **3 · Boosted**: everything in level 2, plus motion blur on fast moves and spotlights (the key part of a chart stays sharp while the rest blurs and dims for a moment). Most energetic; renders about 2× slower. (The choppy stop-motion look, `clock: "twos"`, is on hold: never offer or set it.)
 
-Without a user (scheduled run), use the recommended options and say so at the top of the delivery. Motion is then classic.
+   If the user answers "Other" or asks what the options look like, describe the four levels in two lines each
+   (what moves, how it feels, which suits a board report: 0–1, a consumer-style recap: 2–3) and ask again.
+   What each level sets in the plan is in `COMPONENTS.md` ("Motion levels").
+
+Without a user (scheduled run), use the recommended options and say so at the top of the delivery. Motion is then level 0.
 
 ### 2. Analyze the deck
 ```bash
@@ -101,13 +107,35 @@ For each scene, the visual is:
 Present a table: scene · source tab · message · numbers (value and where it came from) · **visual in the deck** ·
 **marks in the video** and what animates on which word. Ask what to cut or change.
 
+**Vary the scenes.** Not every scene is a title above one panel with one chart. Across the video mix, as the story
+allows: a hook scene (one huge number or one full-bleed chart, `bleed: true`), a side-by-side scene, a short beat
+(one KPI and one sentence, 4–6 s), a `slide` scene with camera focus, a chart with a callout. Two neighbouring
+scenes never share the same layout. The scene that carries the main message is the full-bleed one.
+
+**The camera goes where the narrator is.** On a chart scene, point the camera at the part the speech names, on the word
+that names it (`camera: [{at: "word", target: "id", box: [...]}]`): the bars that fall below the minimum, the last point, one slice.
+From level 1 on, every chart scene has at least one move; at level 0 there is none. Mix the `kind` across the video:
+`snap` for the hard point, `zoom` (smooth) for a slow build, `blur` for a jump to a different region, `spotlight` (level 3 only, at most two per video) for the one moment that carries the story; the same kind
+never three scenes in a row. Give the boxes and charts an `id` and aim with `target` (a body of several panels
+makes fractions of the whole body hit the wrong one). Moves return by themselves after about 3 s, so you never write
+a reset unless you want it earlier; time each move after its chart has entered.
+Add a column "camera" (where, on which word, which kind) to the table below.
+
 Fixed structure: `intro` first when the brand logo opens the video (the greeting is its `speech`), `outro` last,
 and the agenda or next-steps scene right before `outro`.
 
 ### 5. Script (gate 2)
+Vary the rhythm: sentence lengths alternate (a short one after a long one), scenes open in different ways (with the
+number, with a contrast, with a question, with the consequence), and at most one scene opens with the name of its metric.
+The hook scene's first sentence is the most striking fact of the story, not the context. Name the highlight early in the
+scene, so the camera has a word to move on.
 Write each scene's `speech` within the word budget: 60 / 90 / 120 s ≈ 130 / 195 / 260 words in total, with
 4 / 5 / 6–7 content scenes. Speech runs at 2.7 words/s, and every sentence end and every scene add pauses, so the
-budget is lower than words × 2.7. Set `config.target_duration` to the chosen duration, and `config.motion` / `transition` / `clock` to the motion answer (classic: set none of them). Write the TTS text with numbers in words and a pause between scenes; it goes into
+budget is lower than words × 2.7. Set `config.target_duration` to the chosen duration, the motion fields to the chosen level (table in `COMPONENTS.md`; level 0 sets none). Camera moves
+need a `camera` on the scene (section 4, "The camera goes where the narrator is"; a `slide` scene with `focus` also
+moves); a chart scene without one has none. Set `bleed: true` (one chart, `"panel": false`) on the scenes where the
+chart is the hero, and `header: false` on others that only need the room: the top bar is optional, not a fixture of every scene. At levels 2 and 3 give at
+least two content scenes the `slide` type with camera focus (the deck tab itself), or the camera snaps never show. Write the TTS text with numbers in words and a pause between scenes; it goes into
 `<work>/narration.txt` (the packager refuses an empty one).
 
 ### 6. Write and validate the plan
@@ -145,16 +173,20 @@ E=/tmp/lve/llm-video-engine; $E --version
    ```
 2. **Grid**: one frame per scene (`<work>/<output>_grid.jpg`). Read it, compare each scene with its deck tab, fix and
    repeat. This is the visual check; it takes seconds.
-3. **Render** (a fraction of the video length on a few cores; run it in the background and poll if the tool has a timeout):
-   ```bash
-   $E render <work>/plan.json --out <outputs>/<name>.mp4 --threads $(nproc)
-   ```
-   With `formats: ["1080","720"]` omit `--out`: both files land next to the plan.
-4. **Package** the plan for local re-renders:
+3. **Package and hand over the plan first**, so the user sees progress before the render ends:
    ```bash
    node <skill>/scripts/package_plan.mjs <work>/plan.json --narration <work>/narration.txt --out <outputs>/video-plan.zip
    ```
-Deliver the MP4(s), `video-plan.zip`, the TTS text and any deck visual that was not reproduced exactly (and why).
+   Then send a short message right away: the plan is ready (scene list, estimated length, the TTS text, link to
+   `video-plan.zip`) and the video is rendering now (about a minute for 90 s of video at level 0–2, about twice that
+   with blur).
+4. **Render** (run it in the background and poll if the tool has a timeout):
+   ```bash
+   $E render <work>/plan.json --out <outputs>/<name>.mp4 --threads $(nproc)      # add --shutter 6 at level 3
+   ```
+   With `formats: ["1080","720"]` omit `--out`: both files land next to the plan.
+Deliver the MP4(s) and any deck visual that was not reproduced exactly (and why). Order of what the user sees:
+plan ready, then `video-plan.zip`, then the video.
 The MP4 has no audio: the TTS text is for the voice-over.
 
 If `bin/linux-x64.tar.xz` is missing or the binary does not start (`ldd /tmp/lve/llm-video-engine-x86-64` shows what is missing; `LVE_BUILD=x86-64` forces the baseline build if the AVX2 one crashes), do not improvise a

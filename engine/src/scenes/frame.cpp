@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <map>
 #include <sstream>
 #include <stdexcept>
 
@@ -31,8 +32,15 @@ struct Logos {
 
 bool isBox(const json& n) { return !n.contains("type"); }
 
+// Rectangle of every box or component that has an `id`, in body coordinates, for camera targets.
+std::map<std::string, Rect> gIds;
+float gOx = 0, gOy = 0;  // absolute origin (body coordinates) of the box being laid out
+
 void layoutBox(Kit& kit, Node* parent, const json& box, Rect r) {
     const Theme& th = kit.th;
+    const float ax = gOx + r.x, ay = gOy + r.y, sx = gOx, sy = gOy;
+    if (box.contains("id")) gIds[box["id"].get<std::string>()] = {ax, ay, r.w, r.h};
+    gOx = ax; gOy = ay;
     Node* g = parent->add(group(r.x, r.y));
     if (box.contains("at")) {
         g->ox = r.w / 2; g->oy = r.h / 2;
@@ -80,7 +88,10 @@ void layoutBox(Kit& kit, Node* parent, const json& box, Rect r) {
         const float s = size[i] >= 0 ? size[i] : (growSum > 0 ? rest * grow[i] / growSum : 0);
         const Rect cr = row ? Rect{pos, in.y, s, in.h} : Rect{in.x, pos, in.w, s};
         if (isBox(*flow[i])) layoutBox(kit, g, *flow[i], cr);
-        else buildComponent(kit, g, *flow[i], cr);
+        else {
+            if (flow[i]->contains("id")) gIds[(*flow[i])["id"].get<std::string>()] = {gOx + cr.x, gOy + cr.y, cr.w, cr.h};
+            buildComponent(kit, g, *flow[i], cr);
+        }
         pos += s + gap;
     }
 
@@ -94,16 +105,139 @@ void layoutBox(Kit& kit, Node* parent, const json& box, Rect r) {
         const float fy = a.find("bottom") != std::string::npos ? in.y + in.h - h - y : in.y + y;
         buildComponent(kit, g, *f, {fx, fy, w, h});
     }
+    gOx = sx; gOy = sy;
 }
 
 // ---------- scenes ----------
 
-void titleBlock(Kit& kit, Node* in, const json& c) {
+// Camera on a content body. A move aims at a `target` (the id of a box or component) and/or a `box` (fractions
+// [x, y, w, h] of the target, or of the whole body without one); `reset` returns to the whole body. Every move
+// returns by itself after `hold` seconds (default 3; 0 stays) unless another move comes first, so a panel that
+// the camera left is never left cut. kind "snap" (default): one frame then a settle in measured motion, an ease in
+// classic; "zoom": a smooth push in; "blur": a snap with a directional smear along the move; "spotlight": a snap
+// onto the region, then the rest blurs and dims while the region stays sharp, then the blur lifts and it snaps back.
+struct CamMove {
+    float t = 0, zmax = 2.2f, hold = 3;
+    Rect region;
+    bool reset = false;
+    std::string kind = "snap";
+};
+
+void cameraMoves(Kit& kit, Node* frame, Node* body, const json& cam, const json& bodySpec, float bw, float bh, float S1) {
+    const Theme& th = kit.th;
+    const std::string where = "scene " + std::to_string(kit.k + 1) + ": camera ";
+    std::vector<CamMove> mv;
+    for (size_t i = 0; i < cam.size(); ++i) {
+        const auto& m = cam[i];
+        CamMove c;
+        c.t = kit.at(m.value("at", json()), 1.5f + i * 3);
+        c.reset = m.value("reset", false);
+        c.kind = m.value("kind", "snap");
+        c.zmax = m.value("zoom_max", 2.2f);
+        c.hold = m.value("hold", c.kind == "spotlight" ? 3.8f : 3.f);
+        if (!c.reset) {
+            Rect base{0, 0, bw, bh};
+            if (m.contains("target")) {
+                const std::string id = m["target"].get<std::string>();
+                const auto it = gIds.find(id);
+                if (it == gIds.end()) throw std::runtime_error(where + "target '" + id + "' matches no id in the body");
+                base = it->second;
+            } else if (!m.contains("box")) throw std::runtime_error(where + "move needs a target or a box");
+            c.region = base;
+            if (m.contains("box")) {
+                const auto bx = m["box"].get<std::vector<float>>();
+                c.region = {base.x + bx[0] * base.w, base.y + bx[1] * base.h, std::max(bx[2] * base.w, 1.f), std::max(bx[3] * base.h, 1.f)};
+            }
+        }
+        mv.push_back(c);
+    }
+    // Moves that return by themselves.
+    std::vector<CamMove> all;
+    for (size_t i = 0; i < mv.size(); ++i) {
+        all.push_back(mv[i]);
+        if (mv[i].reset || mv[i].hold <= 0) continue;
+        const float end = mv[i].t + mv[i].hold;
+        if ((i + 1 < mv.size() && mv[i + 1].t < end + .3f) || end > S1 - .8f) continue;
+        CamMove r;
+        r.t = end; r.reset = true;
+        r.kind = mv[i].kind == "zoom" || mv[i].kind == "spotlight" ? mv[i].kind : "snap";
+        all.push_back(r);
+    }
+
+    // Spotlight: after the camera has snapped onto the region, everything else blurs and dims while the region
+    // stays sharp in place (a clipped second copy of the body under the same camera pose); on the way out the
+    // blur lifts and the camera snaps back.
+    Node *dim = nullptr, *win = nullptr;
+    auto closeSpot = [&](float t) {
+        dim->opacity.fromTo(1, 0, t, .25f, ease::p2In);
+        win->opacity.fromTo(1, 0, t, .2f, ease::p2In);
+        body->blurX.fromTo(6, 0, t, .25f, ease::p2In);
+        body->blurY.fromTo(6, 0, t, .25f, ease::p2In);
+        dim = win = nullptr;
+    };
+    for (const CamMove& c : all) {
+        float t = c.t;
+        if (dim) {
+            closeSpot(t);
+            if (c.reset) t += .15f;  // let the blur lift first, then snap back
+        }
+        float tx = 0, ty = 0, z = 1;
+        if (!c.reset) {
+            const Rect& r = c.region;
+            z = std::clamp(std::min(bw * .7f / r.w, bh * .7f / r.h), 1.f, c.zmax);
+            tx = std::clamp(bw / 2 - (r.x + r.w / 2) * z, bw - bw * z, 0.f);
+            ty = std::clamp(bh / 2 - (r.y + r.h / 2) * z, bh - bh * z, 0.f);
+        }
+        const bool spotlight = c.kind == "spotlight" && !c.reset;
+        const std::string kind = c.kind == "spotlight" ? "snap" : c.kind;
+        if (kind != "zoom" && motion::measured()) {
+            const float dx = std::abs(tx - (body->tx.empty() ? 0.f : body->tx.eval(t))), dy = std::abs(ty - (body->ty.empty() ? 0.f : body->ty.eval(t)));
+            motion::snapTo(body->tx, tx, t, 0);
+            motion::snapTo(body->ty, ty, t, 0);
+            motion::snapTo(body->scale, z, t, 1);
+            if (kind == "blur") motion::smear(body, t, dy > dx, 30, 5);
+        } else if (kind == "zoom") {
+            body->tx.to(tx, t, 1.4f, ease::p3InOut, 0);
+            body->ty.to(ty, t, 1.4f, ease::p3InOut, 0);
+            body->scale.to(z, t, 1.4f, ease::p3InOut, 1);
+        } else {
+            body->tx.to(tx, t, 1.f, ease::p3InOut, 0);
+            body->ty.to(ty, t, 1.f, ease::p3InOut, 0);
+            body->scale.to(z, t, 1.f, ease::p3InOut, 1);
+        }
+        if (!spotlight) continue;
+        // The window opens once the camera has settled.
+        const float to = t + (motion::measured() ? motion::F(16) : 1.1f);
+        const Rect& r = c.region;
+        const float pad = 10;
+        const float wx = tx + r.x * z - pad, wy = ty + r.y * z - pad, ww = r.w * z + 2 * pad, wh = r.h * z + 2 * pad;
+        dim = frame->add(rect(0, 0, bw, bh, Color{0, 0, 0, .5f}));
+        dim->opacity.fromTo(0, 1, to, .25f, ease::p2Out);
+        win = frame->add(group(0, 0));
+        win->clip = true; win->clipX = wx; win->clipY = wy; win->clipW = ww; win->clipH = wh;
+        Node* inner = win->add(group(0, 0));
+        inner->tx.set(tx, 0); inner->ty.set(ty, 0); inner->scale.set(z, 0);
+        const float sx0 = gOx, sy0 = gOy;
+        gOx = gOy = 0;
+        layoutBox(kit, inner, bodySpec, {0, 0, bw, bh});
+        gOx = sx0; gOy = sy0;
+        Node* ring = win->add(rect(wx, wy, ww, wh, Color{}, 8));
+        ring->stroke = th.accent.alpha(.7f); ring->strokeW = 1.5f;
+        win->opacity.fromTo(0, 1, to, .2f, ease::p2Out);
+        body->blurX.fromTo(0, 6, to, .25f, ease::p2Out);
+        body->blurY.fromTo(0, 6, to, .25f, ease::p2Out);
+    }
+    if (dim) closeSpot(std::max(S1 - .6f, all.back().t + .3f));
+}
+
+// `k` scales the type and `width` places the chip: a bleed scene overlays a larger title on the chart.
+void titleBlock(Kit& kit, Node* in, const json& c, float k = 1, float width = kBodyW) {
     const Theme& th = kit.th;
     if (c.contains("kicker") && !c["kicker"].empty()) {
         const auto& kk = c["kicker"];
-        const TextStyle bold = style(10.5f, 700, Align::Left, .12f), rest = style(10.5f, 600, Align::Left, .12f);
-        const float b = baseline(0, 10.5f, 10.5f * kNormalLine);
+        const float ks = 10.5f * k;
+        const TextStyle bold = style(ks, 700, Align::Left, .12f), rest = style(ks, 600, Align::Left, .12f);
+        const float b = baseline(0, ks, ks * kNormalLine);
         float x = 0;
         if (kk.size() > 1) {
             const std::string s = upper(kk[0].get<std::string>());
@@ -115,9 +249,9 @@ void titleBlock(Kit& kit, Node* in, const json& c) {
         }
     }
     if (c.contains("title")) {
-        const TextStyle st = style(28, 700, Align::Left, -.01f);
+        const TextStyle st = style(28 * k, 700, Align::Left, -.01f);
         Node* h1 = in->add(group(0, 0));
-        const float b = baseline(10.5f * kNormalLine + 8, 28, 28 * 1.2f);
+        const float b = baseline(10.5f * k * kNormalLine + 8 * k, 28 * k, 28 * k * 1.2f);
         const std::string t = c["title"].get<std::string>();
         if (motion::measured()) {
             // Word by word: the title in ink, then the highlight in the accent.
@@ -144,8 +278,8 @@ void titleBlock(Kit& kit, Node* in, const json& c) {
     if (c.contains("chip")) {
         const auto& ch = c["chip"];
         float w = 0;
-        Node* g = chip(kit, in, 0, 34, ch["text"].get<std::string>(), ch.value("tone", "good"), 14, 14, 8, &w);
-        g->x = kBodyW - w;
+        Node* g = chip(kit, in, 0, 34 * k, ch["text"].get<std::string>(), ch.value("tone", "good"), 14, 14, 8, &w);
+        g->x = width - w;
         pop(g, kit.at(ch.value("at", json()), 1));
     }
 }
@@ -378,6 +512,10 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
         hdr->add(text(kW - 28, baseline((46 - 10.5f * kNormalLine) / 2, 10.5f, 10.5f * kNormalLine), upper(period),
                       style(10.5f, 600, Align::Right, .12f), th.text3));
 
+    // Progress line along the bottom; bleed scenes hide it.
+    Node* prog = root->add(rect(0, kH - 3, kW, 3, th.accent));
+    prog->scaleX.fromTo(0, 1, 0, total, ease::linear);
+
     for (int k = 0; k < N; ++k) {
         const auto& c = scenes[k];
         const std::string type = c.value("type", "");
@@ -412,7 +550,9 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
                 sc->tx.to(-30, S1 - .45f, .45f, ease::p2In, 0);
             }
         }
-        const bool withHeader = type == "content" || (type == "slide" && c.value("header", false));
+        const bool bleed = type == "content" && c.value("bleed", false);
+        const bool withHeader = !bleed && c.value("header", type == "content");
+        prog->opacity.to(bleed ? 0.f : 1.f, kit.S0, .3f, ease::p1Out, 1);
         hdr->opacity.to(withHeader ? 1.f : 0.f, kit.S0, .4f, ease::p1Out, 0);
         if (const std::string tab = c.value("tab", ""); !tab.empty()) {
             const size_t ti = std::find(tabs.begin(), tabs.end(), tab) - tabs.begin();
@@ -426,22 +566,30 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
         else if (type == "outro") outro(kit, sc, c, lg);
         else if (type == "slide") slideScene(kit, sc, c, loadImage(asset(c.at("image").get<std::string>()), (int)std::ceil(720 * pixelScale)), S1);
         else if (type == "content") {
-            Node* in = sc->add(group(kInnerX, kInnerY));
-            if (motion::measured()) {
-                // No dead frame: the page creeps toward the viewer for the whole scene.
-                in->ox = kBodyW / 2; in->oy = (kBodyTop + kBodyH) / 2;
-                motion::drift(in->scale, 1, 1.012f, kit.S0, S1);
-            }
-            titleBlock(kit, in, c);
-            Node* body = in->add(group(0, kBodyTop));
-            layoutBox(kit, body, c.at("body"), {0, 0, kBodyW, kBodyH});
+            // header: false drops the bar for this scene and gives its 46 px to the body. bleed: true goes
+            // further: no bar, no progress line, a large title in a band at the top and the body running to
+            // the other three edges of the frame.
+            const float up = bleed ? 0.f : (c.value("header", true) ? 0.f : 46.f);
+            const float bx = bleed ? 12.f : kInnerX, by = bleed ? 0.f : kInnerY - up;
+            const float bw = bleed ? kW - 24 : kBodyW, bh = bleed ? kH - 112 : kBodyH + up;
+            const float top = bleed ? 112.f : kBodyTop;
+            Node* in = sc->add(group(bx, by));
+            // No page drift: any slow scale or shift moves every glyph by fractions of a pixel and the text
+            // shimmers. Holds stay still; the camera and the marks carry the motion.
+            const bool cam = c.contains("camera") && !c["camera"].empty();
+            Node* frame = in->add(group(0, top));
+            if (cam) { frame->clip = true; frame->clipW = bw; frame->clipH = bh; }
+            Node* body = frame->add(group(0, 0));
+            gIds.clear(); gOx = gOy = 0;
+            layoutBox(kit, body, c.at("body"), {0, 0, bw, bh});
+            if (cam) cameraMoves(kit, frame, body, c["camera"], c.at("body"), bw, bh, S1);
+                        Node* tin = bleed ? in->add(group(32, 34)) : in;
+            titleBlock(kit, tin, c, bleed ? 1.35f : 1.f, bleed ? kW - 88 : kBodyW);
         } else {
             throw std::runtime_error("scene " + std::to_string(k + 1) + ": unsupported type '" + type + "'");
         }
     }
 
-    Node* prog = root->add(rect(0, kH - 3, kW, 3, th.accent));
-    prog->scaleX.fromTo(0, 1, 0, total, ease::linear);
     prepare(*root, fonts);
     v.B = kit.B;
     v.twos = cfg.value("clock", "smooth") == "twos";
