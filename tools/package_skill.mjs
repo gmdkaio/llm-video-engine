@@ -3,6 +3,7 @@
 // skill/ for the skill files, schema/ for the schema.
 //
 //   node tools/package_skill.mjs
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,8 +28,13 @@ add('schema/plan.schema.json', 'schema/plan.schema.json');
 // Linux engine bundle built by .github/workflows/linux-bundle.yml (gh run download -n linux-x64 -D dist/linux-x64).
 // Without it the zip is plan-only and the skill falls back to delivering video-plan.zip.
 const bundle = path.join(root, 'dist/linux-x64');
+// claude.ai rejects skill zips above 30 MB uncompressed, so the binaries travel as one nested tar.xz
+// (counted at its compressed size, 26 MB with both engine builds; gzip gives 40) that the skill unpacks once per session.
 if (fs.existsSync(path.join(bundle, 'llm-video-engine'))) {
-  for (const f of ['llm-video-engine', 'llm-video-engine-x86-64', 'llm-video-engine-x86-64-v3', 'ffmpeg', 'ffprobe', 'fonts/Montserrat-VF.ttf', 'fonts/OFL.txt']) add(`dist/linux-x64/${f}`, `bin/linux-x64/${f}`);
+  const tgz = path.join(root, 'dist/linux-x64.tar.xz');
+  // Relative paths: GNU tar (Git Bash) reads "C:" as a remote host.
+  execFileSync('tar', ['-cJf', 'linux-x64.tar.xz', '-C', 'linux-x64', 'llm-video-engine', 'llm-video-engine-x86-64', 'llm-video-engine-x86-64-v3', 'ffmpeg', 'ffprobe', 'fonts'], { cwd: path.join(root, 'dist') });
+  entries.push({ name: `${name}/bin/linux-x64.tar.xz`, data: fs.readFileSync(tgz) });
 } else console.warn('warning: dist/linux-x64 not found, building a plan-only skill');
 
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });

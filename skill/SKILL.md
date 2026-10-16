@@ -35,7 +35,7 @@ schema/plan.schema.json          the plan contract
 scripts/analyze_deck.mjs         deck → analysis.json, inventory.md, tab_NN.png, grid.jpg, logo_N
 scripts/validate_plan.mjs        schema + `at` words + referenced files (no dependencies)
 scripts/package_plan.mjs         validates, then writes video-plan.zip
-bin/linux-x64/                   llm-video-engine (picks the build for this CPU), ffmpeg, ffprobe, fonts/ (self-contained, no install)
+bin/linux-x64.tar.xz              llm-video-engine (picks the build for this CPU), ffmpeg, ffprobe, fonts/ (self-contained, no install)
 ```
 Find the skill folder first (the `<skill>` below): the folder that holds this SKILL.md and `scripts/`.
 If `scripts/` or `COMPONENTS.md` is missing, the skill was installed without its files: tell the user to upload
@@ -47,13 +47,20 @@ Chromium in the Playwright cache (set `CHROMIUM_PATH` to point at one). The othe
 
 ## Flow
 
-### 1. Questions (one AskUserQuestion call)
+### 1. Questions (two AskUserQuestion calls)
+First call:
 1. Greeting: `"Hi, {name}."` (recommended) · without a name · none.
 2. Brand logo: start and end (recommended) · start · end · none. Only when a brand logo is available.
 3. Formats: 1080p (recommended) · 1080p + 720p · 720p.
 4. Duration: 90 s (recommended) · 60 s · 120 s · free.
 
-Without a user (scheduled run), use the recommended options and say so at the top of the delivery.
+Second call (AskUserQuestion takes at most 4 questions), the motion style. Motion is an option, never the default:
+5. Motion: classic (recommended; `motion` left out of `config`) · measured (`"motion": "measured"`: word-by-word titles,
+   fast landings, stepped counters, accelerating exits, snappy camera) · measured + whip transitions
+   (`"transition": "whip"`, energetic, consumer-style) · measured + twos (`"clock": "twos"`, hand-animated look).
+   Describe each in one line; for a sober board report suggest classic or measured, not whip. Details in `COMPONENTS.md`.
+
+Without a user (scheduled run), use the recommended options and say so at the top of the delivery. Motion is then classic.
 
 ### 2. Analyze the deck
 ```bash
@@ -100,7 +107,7 @@ and the agenda or next-steps scene right before `outro`.
 ### 5. Script (gate 2)
 Write each scene's `speech` within the word budget: 60 / 90 / 120 s ≈ 130 / 195 / 260 words in total, with
 4 / 5 / 6–7 content scenes. Speech runs at 2.7 words/s, and every sentence end and every scene add pauses, so the
-budget is lower than words × 2.7. Set `config.target_duration` to the chosen duration. Write the TTS text with numbers in words and a pause between scenes; it goes into
+budget is lower than words × 2.7. Set `config.target_duration` to the chosen duration, and `config.motion` / `transition` / `clock` to the motion answer (classic: set none of them). Write the TTS text with numbers in words and a pause between scenes; it goes into
 `<work>/narration.txt` (the packager refuses an empty one).
 
 ### 6. Write and validate the plan
@@ -129,7 +136,8 @@ add; the estimate is the engine's own). It prints the estimated length with `pla
 ### 7. Check, render, package and deliver
 The engine is self-contained. Once per session:
 ```bash
-E=<skill>/bin/linux-x64/llm-video-engine; chmod +x <skill>/bin/linux-x64/*; $E --version
+mkdir -p /tmp/lve && tar -xJf <skill>/bin/linux-x64.tar.xz -C /tmp/lve && chmod +x /tmp/lve/llm-video-engine /tmp/lve/ffmpeg /tmp/lve/ffprobe
+E=/tmp/lve/llm-video-engine; $E --version
 ```
 1. **Layout check**, fix until it prints `plan ok` (lines are the codes in section 8):
    ```bash
@@ -149,8 +157,7 @@ E=<skill>/bin/linux-x64/llm-video-engine; chmod +x <skill>/bin/linux-x64/*; $E -
 Deliver the MP4(s), `video-plan.zip`, the TTS text and any deck visual that was not reproduced exactly (and why).
 The MP4 has no audio: the TTS text is for the voice-over.
 
-If `bin/linux-x64` is missing or the binary does not start (`ldd <skill>/bin/linux-x64/llm-video-engine-x86-64`
-shows what is missing; `LVE_BUILD=x86-64` forces the baseline build if the AVX2 one crashes), do not improvise a
+If `bin/linux-x64.tar.xz` is missing or the binary does not start (`ldd /tmp/lve/llm-video-engine-x86-64` shows what is missing; `LVE_BUILD=x86-64` forces the baseline build if the AVX2 one crashes), do not improvise a
 renderer: deliver `video-plan.zip` and tell the user to run `llm-video-engine render video-plan.zip` locally.
 
 ### 8. Fixes from the user
