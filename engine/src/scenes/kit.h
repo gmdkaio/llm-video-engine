@@ -11,6 +11,7 @@
 
 #include "core/at.h"
 #include "core/format.h"
+#include "motion/moves.h"
 #include "render/graph.h"
 #include "render/text.h"
 #include "render/theme.h"
@@ -91,15 +92,32 @@ inline std::string upper(std::string s) {
     return s;
 }
 
-// Animations, as the reference template's helpers.
-inline void fade(Node* n, float t, float d = .3f) { n->opacity.fromTo(0, 1, t, d, ease::p1Out); }
+// Animations, as the reference template's helpers. With config.motion "measured" they use the
+// measured grammar instead (motion/moves.h): shorter moves, decelerating landings, start oversized.
+inline void fade(Node* n, float t, float d = .3f) {
+    if (motion::measured()) { n->opacity.fromTo(0, 1, t, motion::F(6), motion::fn(motion::cruise)); return; }
+    n->opacity.fromTo(0, 1, t, d, ease::p1Out);
+}
 inline void pop(Node* n, float t, float dy = 14, float s = .96f) {
+    if (motion::measured()) {
+        motion::Pose p;
+        p.dy = dy;
+        motion::arrive(n, t, p, 12, motion::fn(motion::softLand), 4);
+        if (s != 1) n->scale.fromTo(2 - s, 1, t, motion::F(11), motion::fn(motion::snapSettle));
+        return;
+    }
     n->opacity.fromTo(0, 1, t, .5f, ease::pop);
     n->ty.fromTo(dy, 0, t, .5f, ease::pop);
     if (s != 1) n->scale.fromTo(s, 1, t, .5f, ease::pop);
 }
 // Slide in: opacity 0->1 while moving (dx, dy) -> 0.
 inline void enter(Node* n, float t, float dx, float dy, float d = .4f, Ease e = ease::p1Out) {
+    if (motion::measured()) {
+        motion::Pose p;
+        p.dx = dx; p.dy = dy;
+        motion::arrive(n, t, p);
+        return;
+    }
     n->opacity.fromTo(0, 1, t, d, e);
     if (dx != 0) n->tx.fromTo(dx, 0, t, d, e);
     if (dy != 0) n->ty.fromTo(dy, 0, t, d, e);
@@ -135,6 +153,13 @@ inline Node* counter(Node* parent, float x, float baselineY, double from, double
     Node* n = parent->add(text(x, baselineY, "", st, c));
     n->format = std::move(fmt);
     n->opacity.set(0, 0);
+    if (motion::measured()) {
+        motion::Pose p;
+        p.dy = 10;
+        motion::arrive(n, t, p);
+        motion::count(n->value, from, to, t, (int)std::lround(dur * timeline::kFps));
+        return n;
+    }
     n->opacity.fromTo(0, 1, t, .35f, ease::p1Out);
     n->ty.fromTo(10, 0, t, .35f, ease::p1Out);
     n->value.fromTo((float)from, (float)to, t, dur, ease::p2Out);

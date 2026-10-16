@@ -18,6 +18,7 @@
 #include "include/core/SkTextBlob.h"
 #include "include/effects/SkDashPathEffect.h"
 #include "include/effects/SkGradient.h"
+#include "include/effects/SkImageFilters.h"
 #include "include/effects/SkTrimPathEffect.h"
 #include "include/utils/SkParsePath.h"
 #include "render/text.h"
@@ -138,18 +139,27 @@ sk_sp<SkImage> rasterize(const Node& n, float ox, float oy, float w, float h, fl
     return surface->makeImageSnapshot();
 }
 
+namespace {
+struct Strip { int w = 0, h = 0, y0 = 0; };
+thread_local Strip gStrip;
+}  // namespace
+
+void setDrawStrip(int frameW, int frameH, int y0) { gStrip = {frameW, frameH, y0}; }
+
 void draw(SkCanvas* c, const Node& n, float t, const Fonts& fonts) {
     if (!n.baked) return drawNode(c, n, t, fonts);
-    // Gradients cost ~100 ns/pixel on the raster backend, so static layers are drawn once.
+    // Gradients cost ~100 ns/pixel on the raster backend, so static layers are drawn once, at full
+    // frame size even when this canvas is one strip of the frame.
     std::call_once(n.baked->once, [&] {
-        auto surface = SkSurfaces::Raster(SkImageInfo::MakeN32Premul(c->imageInfo().dimensions()));
-        surface->getCanvas()->setMatrix(c->getLocalToDevice());
+        const SkISize full = gStrip.w > 0 ? SkISize::Make(gStrip.w, gStrip.h) : c->imageInfo().dimensions();
+        auto surface = SkSurfaces::Raster(SkImageInfo::MakeN32Premul(full));
+        surface->getCanvas()->setMatrix(SkM44::Translate(0, (float)gStrip.y0) * c->getLocalToDevice());
         drawNode(surface->getCanvas(), n, t, fonts);
         n.baked->image = surface->makeImageSnapshot();
     });
     c->save();
     c->resetMatrix();
-    c->drawImage(n.baked->image, 0, 0);
+    c->drawImage(n.baked->image, 0, (float)-gStrip.y0);
     c->restore();
 }
 
@@ -175,9 +185,17 @@ static void drawNode(SkCanvas* c, const Node& n, float t, const Fonts& fonts) {
         c->clipRect(SkRect::MakeXYWH(n.clipX, n.clipY, cw, n.clipH), true);
     }
 
-    // Groups with several children fade as one layer, like CSS opacity.
-    const bool layer = n.kind == NodeKind::Group && alpha < 0.999f && !n.children.empty();
-    if (layer) {
+    // Groups with several children fade as one layer, like CSS opacity. A blurred node is always a layer.
+    const float bx = at(n.blurX, t, 0), by = at(n.blurY, t, 0);
+    const bool blurred = bx > 0.01f || by > 0.01f;
+    const bool layer = blurred || (n.kind == NodeKind::Group && alpha < 0.999f && !n.children.empty());
+    if (blurred) {
+        SkPaint lp;
+        lp.setAlphaf(alpha);
+        lp.setImageFilter(SkImageFilters::Blur(bx, by, nullptr));
+        c->saveLayer(nullptr, &lp);
+        alpha = 1;
+    } else if (layer) {
         c->saveLayerAlphaf(nullptr, alpha);
         alpha = 1;
     }

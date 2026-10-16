@@ -4,12 +4,13 @@
 #include <string>
 
 // Closed-form easings matching GSAP's names. powerN is a polynomial of degree N+1.
-enum class EaseKind { Linear, In, Out, InOut, BackOut };
+enum class EaseKind { Linear, In, Out, InOut, BackOut, Fn };
 
 struct Ease {
     EaseKind kind = EaseKind::Out;
     int power = 1;        // GSAP's default ease is power1.out
     float back = 1.70158f;
+    float (*fn)(float) = nullptr;  // EaseKind::Fn: any curve with f(0) = 0, f(1) = 1 (motion/eases.h)
 
     float operator()(float t) const {
         if (t <= 0) return 0;
@@ -21,6 +22,7 @@ struct Ease {
         case EaseKind::Out:    return 1 - std::pow(1 - t, (float)n);
         case EaseKind::InOut:
             return t < 0.5f ? std::pow(2 * t, (float)n) / 2 : 1 - std::pow(2 * (1 - t), (float)n) / 2;
+        case EaseKind::Fn:     return fn(t);
         case EaseKind::BackOut: {
             const float p = t - 1;
             return p * p * ((back + 1) * p + back) + 1;

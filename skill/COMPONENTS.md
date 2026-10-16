@@ -22,6 +22,13 @@ Validate against `schema/plan.schema.json`. Unknown keys are rejected so typos s
 ```
 
 - `formats`: `"1080"` (1920×1080), `"720"` (1280×720, small file). Vertical comes later.
+- `motion`: `"classic"` (default) or `"measured"`. Measured uses shorter, decelerating moves for the whole
+  video: the title builds word by word, panels and chips land in about 12 frames, counters step once per frame,
+  scenes leave on an accelerating exit, the intro logo arrives oversized and dives into the cut, slide focus
+  moves snap and settle, and the page creeps slowly so a hold is never dead. Same plan, no other field changes.
+- `transition` (measured only): `"slide"` (default) or `"whip"` (whip pans between scenes). Use whips for
+  energetic, consumer-style summaries, not for a sober board report.
+- `clock`: `"smooth"` (default) or `"twos"` (every pose held two frames, a hand-animated look).
 - `theme`: six colors are required (`bg`, `text`, `accent`, `good`, `bad`, `warn`); `panel` and `blue` are derived
   when missing. Take them from the deck.
 - `logos`: paths relative to the plan. SVG or PNG. `brand` is the full lockup (intro, outro); `brand_mark` the

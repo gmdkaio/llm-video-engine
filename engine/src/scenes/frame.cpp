@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <sstream>
 #include <stdexcept>
 
 #include "render/image.h"
@@ -118,10 +119,27 @@ void titleBlock(Kit& kit, Node* in, const json& c) {
         Node* h1 = in->add(group(0, 0));
         const float b = baseline(10.5f * kNormalLine + 8, 28, 28 * 1.2f);
         const std::string t = c["title"].get<std::string>();
-        h1->add(text(0, b, t, st, th.text));
-        if (c.contains("highlight"))
-            h1->add(text(kit.measure(t + " ", st), b, c["highlight"].get<std::string>(), st, th.accent));
-        enter(h1, kit.S0 + .2f, 0, 12, .5f);
+        if (motion::measured()) {
+            // Word by word: the title in ink, then the highlight in the accent.
+            std::vector<Node*> ws;
+            const float space = kit.measure(" ", st);
+            float x = 0;
+            auto add = [&](const std::string& s, Color col) {
+                std::istringstream in(s);
+                for (std::string w; in >> w;) {
+                    ws.push_back(h1->add(text(x, b, w, st, col)));
+                    x += kit.measure(w, st) + space;
+                }
+            };
+            add(t, th.text);
+            if (c.contains("highlight")) add(c["highlight"].get<std::string>(), th.accent);
+            motion::words(ws, kit.S0 + .2f, motion::Mech::Rise, 18);
+        } else {
+            h1->add(text(0, b, t, st, th.text));
+            if (c.contains("highlight"))
+                h1->add(text(kit.measure(t + " ", st), b, c["highlight"].get<std::string>(), st, th.accent));
+            enter(h1, kit.S0 + .2f, 0, 12, .5f);
+        }
     }
     if (c.contains("chip")) {
         const auto& ch = c["chip"];
@@ -154,8 +172,16 @@ void intro(Kit& kit, Node* sc, const json& c, const Logos& lg) {
         Node* g = sc->add(group(kW / 2 - w / 2, y));
         g->add(imageNode(0, 0, w, h, lg.brand.image));
         g->ox = w * (lg.brandReveal > 0 ? .08f : .5f); g->oy = h / 2;
-        g->opacity.fromTo(0, 1, kit.S0 + .15f, .7f, ease::p3Out);
-        g->scale.fromTo(.82f, 1, kit.S0 + .15f, .7f, ease::p3Out);
+        if (motion::measured()) {
+            // Arrives oversized and comes down; leaves by diving into the cut at a constant octave rate.
+            motion::Pose p;
+            p.scale = 1.86f; p.blur = 6;
+            motion::arrive(g, kit.S0 + .15f, p, 20, motion::fn(motion::snapSettle), 4);
+            motion::dive(g, kit.B[kit.k + 1] - motion::F(9));
+        } else {
+            g->opacity.fromTo(0, 1, kit.S0 + .15f, .7f, ease::p3Out);
+            g->scale.fromTo(.82f, 1, kit.S0 + .15f, .7f, ease::p3Out);
+        }
         if (lg.brandReveal > 0) {
             g->clip = true;
             g->clipX = 0; g->clipY = -10; g->clipH = h + 20;
@@ -208,9 +234,16 @@ void slideScene(Kit& kit, Node* sc, const json& c, const LoadedImage& img, float
         const bool call = fc.contains("callout");
         const float tx = kW / 2 - (bx + bw / 2) * z, ty = (call ? 330.f : 360.f) - (by + bh / 2) * z;
         const float t = T[i];
-        cam->tx.to(tx, t, 1.f, ease::p3InOut, 0);
-        cam->ty.to(ty, t, 1.f, ease::p3InOut, 0);
-        cam->scale.to(z, t, 1.f, ease::p3InOut, 1);
+        if (motion::measured()) {
+            // Reframe as a one-frame snap and a decelerating tail.
+            motion::snapTo(cam->tx, tx, t, 0);
+            motion::snapTo(cam->ty, ty, t, 0);
+            motion::snapTo(cam->scale, z, t, 1);
+        } else {
+            cam->tx.to(tx, t, 1.f, ease::p3InOut, 0);
+            cam->ty.to(ty, t, 1.f, ease::p3InOut, 0);
+            cam->scale.to(z, t, 1.f, ease::p3InOut, 1);
+        }
         // Outline + dimmed surround, in screen space at the end of the move.
         const float L = tx + bx * z - 6, Tp = ty + by * z - 6, W = bw * z + 12, H = bh * z + 12;
         Node* hl = sc->add(group());
@@ -236,7 +269,10 @@ void slideScene(Kit& kit, Node* sc, const json& c, const LoadedImage& img, float
         hl->opacity.fromTo(0, 1, t + .9f, .35f, ease::p1Out);
         hl->opacity.to(0, tEnd, .3f, ease::p1Out, 1);
     }
-    if (!focus.empty() && c.value("back", true)) {
+    if (!focus.empty() && c.value("back", true) && motion::measured()) {
+        for (Track<float>* tr : {&cam->tx, &cam->ty}) tr->to(0, S1 - 1.3f, motion::F(18), motion::fn(motion::glide), 0);
+        cam->scale.to(1, S1 - 1.3f, motion::F(18), motion::fn(motion::glide), 1);
+    } else if (!focus.empty() && c.value("back", true)) {
         cam->tx.to(0, S1 - 1.3f, .9f, ease::p2InOut, 0);
         cam->ty.to(0, S1 - 1.3f, .9f, ease::p2InOut, 0);
         cam->scale.to(1, S1 - 1.3f, .9f, ease::p2InOut, 1);
@@ -252,6 +288,8 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
                                  tk.contains("panel") ? Color::hex(tk["panel"].get<std::string>()) : Color{},
                                  hexOr(tk, "blue", "#4E9CF5"));
     const json cfg = plan.value("config", json::object());
+    motion::style = cfg.value("motion", "classic") == "measured" ? motion::Style::Measured : motion::Style::Classic;
+    const bool whips = motion::measured() && cfg.value("transition", "slide") == "whip";
     const auto& scenes = plan.at("scenes");
     const int N = (int)scenes.size();
 
@@ -352,11 +390,27 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
         Node* sc = scenesNode->add(group());
         v.scenes.push_back(sc);
         sc->opacity.set(0, 0);
-        sc->opacity.fromTo(0, 1, kit.S0, .6f, ease::p3Out);
-        sc->tx.fromTo(30, 0, kit.S0, .6f, ease::p3Out);
-        if (k + 1 < N) {
-            sc->opacity.to(0, S1 - .45f, .45f, ease::p2In, 1);
-            sc->tx.to(-30, S1 - .45f, .45f, ease::p2In, 0);
+        if (motion::measured()) {
+            const bool whipIn = whips && k > 0, whipOut = whips && k + 1 < N;
+            if (whipIn) motion::whipIn(sc, kit.S0, kW * .45f);
+            else {
+                motion::Pose in;
+                in.dx = 30;
+                motion::arrive(sc, kit.S0, in, 12, motion::fn(motion::softLand), 5, false);
+            }
+            if (whipOut) motion::whipOut(sc, S1, -kW * .55f);
+            else if (k + 1 < N) {
+                motion::Pose out;
+                out.dx = -30;
+                motion::depart(sc, S1 - motion::F(13), out);
+            }
+        } else {
+            sc->opacity.fromTo(0, 1, kit.S0, .6f, ease::p3Out);
+            sc->tx.fromTo(30, 0, kit.S0, .6f, ease::p3Out);
+            if (k + 1 < N) {
+                sc->opacity.to(0, S1 - .45f, .45f, ease::p2In, 1);
+                sc->tx.to(-30, S1 - .45f, .45f, ease::p2In, 0);
+            }
         }
         const bool withHeader = type == "content" || (type == "slide" && c.value("header", false));
         hdr->opacity.to(withHeader ? 1.f : 0.f, kit.S0, .4f, ease::p1Out, 0);
@@ -373,6 +427,11 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
         else if (type == "slide") slideScene(kit, sc, c, loadImage(asset(c.at("image").get<std::string>()), (int)std::ceil(720 * pixelScale)), S1);
         else if (type == "content") {
             Node* in = sc->add(group(kInnerX, kInnerY));
+            if (motion::measured()) {
+                // No dead frame: the page creeps toward the viewer for the whole scene.
+                in->ox = kBodyW / 2; in->oy = (kBodyTop + kBodyH) / 2;
+                motion::drift(in->scale, 1, 1.012f, kit.S0, S1);
+            }
             titleBlock(kit, in, c);
             Node* body = in->add(group(0, kBodyTop));
             layoutBox(kit, body, c.at("body"), {0, 0, kBodyW, kBodyH});
@@ -385,6 +444,7 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
     prog->scaleX.fromTo(0, 1, 0, total, ease::linear);
     prepare(*root, fonts);
     v.B = kit.B;
+    v.twos = cfg.value("clock", "smooth") == "twos";
     v.warnings = std::move(kit.warnings);
     return v;
 }

@@ -52,6 +52,7 @@ struct Node {
     Track<float> trim;                       // Line/Polyline/Path stroke drawn from 0 to trim (0..1)
     Track<Color> color;                      // overrides fill (or text colour) when present
     Track<Color> strokeColor;                // overrides stroke when present
+    Track<float> blurX, blurY;               // Gaussian blur sigma in stage units (motion smear, focus reveals)
 
     std::vector<std::unique_ptr<Node>> children;
     std::shared_ptr<Baked> baked;            // set by cache()
@@ -86,3 +87,7 @@ sk_sp<SkImage> rasterize(const Node& n, float ox, float oy, float w, float h, fl
 void prepare(Node& root, const Fonts& fonts);
 
 void draw(SkCanvas* canvas, const Node& node, float t, const Fonts& fonts);
+
+// Frames can be drawn in horizontal strips, each on its own canvas translated by -y0, so a strip's
+// pixels and layers stay in cache. Tells this thread's draws which strip of the full frame they are in.
+void setDrawStrip(int frameW, int frameH, int y0);

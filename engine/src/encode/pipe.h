@@ -9,7 +9,8 @@
 class FfmpegPipe {
 public:
     // `outputArgs` go after the rawvideo input, e.g. {"-c:v", "libx264", ..., "out.mp4"}.
-    FfmpegPipe(int width, int height, float fps, const std::vector<std::string>& outputArgs);
+    // `pixFmt` is the layout of the frames written: bgra, or yuv420p (planar, w * h * 3 / 2 bytes).
+    FfmpegPipe(int width, int height, float fps, const std::vector<std::string>& outputArgs, const std::string& pixFmt = "bgra");
     ~FfmpegPipe();
     void write(const void* data, size_t bytes);
     int close();  // ffmpeg's exit code

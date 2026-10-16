@@ -38,6 +38,24 @@
       "number",
       "null"
      ]
+    },
+    "motion": {
+     "enum": [
+      "classic",
+      "measured"
+     ]
+    },
+    "transition": {
+     "enum": [
+      "slide",
+      "whip"
+     ]
+    },
+    "clock": {
+     "enum": [
+      "smooth",
+      "twos"
+     ]
     }
    }
   },

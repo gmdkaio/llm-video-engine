@@ -18,8 +18,8 @@ static std::string quote(const std::string& s) {
     return q + "\"";
 }
 
-FfmpegPipe::FfmpegPipe(int width, int height, float fps, const std::vector<std::string>& outputArgs) {
-    std::string cmd = "ffmpeg -hide_banner -loglevel error -y -f rawvideo -pix_fmt bgra -s " + std::to_string(width) +
+FfmpegPipe::FfmpegPipe(int width, int height, float fps, const std::vector<std::string>& outputArgs, const std::string& pixFmt) {
+    std::string cmd = "ffmpeg -hide_banner -loglevel error -y -f rawvideo -pix_fmt " + pixFmt + " -s " + std::to_string(width) +
                       "x" + std::to_string(height) + " -framerate " + std::to_string(fps) + " -i -";
     for (const auto& a : outputArgs) cmd += " " + quote(a);
 #ifdef _WIN32

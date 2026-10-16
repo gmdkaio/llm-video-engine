@@ -3,7 +3,7 @@
 //
 //   node tools/readme_charts.mjs [--only waterfall,radar]
 //
-// Needs the engine (engine/build/release, or llm-video-engine on PATH) and ffmpeg on PATH.
+// Needs the engine (engine/build/release or engine/build/linux, or llm-video-engine on PATH) and ffmpeg on PATH.
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -12,8 +12,9 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = path.join(root, '.github/assets/charts');
-const built = path.join(root, 'engine/build/release/llm-video-engine.exe');
-const engine = fs.existsSync(built) ? built : 'llm-video-engine';
+const built = ['engine/build/release/llm-video-engine.exe', 'engine/build/linux/llm-video-engine']
+  .map((p) => path.join(root, p)).find((p) => fs.existsSync(p));
+const engine = built ?? 'llm-video-engine';
 const only = (() => { const i = process.argv.indexOf('--only'); return i < 0 ? null : process.argv[i + 1].split(','); })();
 
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

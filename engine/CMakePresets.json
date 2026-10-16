@@ -24,10 +24,27 @@
         "VCPKG_TARGET_TRIPLET": "x64-linux-release",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed_linux"
       }
+    },
+    {
+      "name": "linux-native",
+      "displayName": "Linux, tuned for this machine (clang, -march=native)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/linux-native",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_FLAGS": "-march=native",
+        "VCPKG_TARGET_TRIPLET": "x64-linux-native",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed_native"
+      }
     }
   ],
   "buildPresets": [
     { "name": "release", "configurePreset": "release" },
-    { "name": "linux", "configurePreset": "linux" }
+    { "name": "linux", "configurePreset": "linux" },
+    { "name": "linux-native", "configurePreset": "linux-native" }
   ]
 }

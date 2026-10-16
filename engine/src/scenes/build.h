@@ -15,6 +15,7 @@ struct Video {
     std::vector<float> B;            // scene boundaries; scene k runs from B[k] to B[k+1]
     std::vector<std::string> warnings;
     std::vector<const Node*> scenes; // one group per scene, in order
+    bool twos = false;               // config.clock "twos": every pose holds two frames
 };
 
 // Expands a plan into one scene graph with tracks for the whole video.
