@@ -26,6 +26,20 @@
       }
     },
     {
+      "name": "linux-v3",
+      "displayName": "Linux, portable to AVX2 CPUs (x86-64-v3), for the sandbox bundle",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/linux-v3",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_FLAGS": "-march=x86-64-v3",
+        "VCPKG_TARGET_TRIPLET": "x64-linux-v3",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed_v3"
+      }
+    },
+    {
       "name": "linux-native",
       "displayName": "Linux, tuned for this machine (clang, -march=native)",
       "generator": "Ninja",
@@ -45,6 +59,7 @@
   "buildPresets": [
     { "name": "release", "configurePreset": "release" },
     { "name": "linux", "configurePreset": "linux" },
+    { "name": "linux-v3", "configurePreset": "linux-v3" },
     { "name": "linux-native", "configurePreset": "linux-native" }
   ]
 }

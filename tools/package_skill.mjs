@@ -28,7 +28,7 @@ add('schema/plan.schema.json', 'schema/plan.schema.json');
 // Without it the zip is plan-only and the skill falls back to delivering video-plan.zip.
 const bundle = path.join(root, 'dist/linux-x64');
 if (fs.existsSync(path.join(bundle, 'llm-video-engine'))) {
-  for (const f of ['llm-video-engine', 'ffmpeg', 'ffprobe', 'fonts/Montserrat-VF.ttf', 'fonts/OFL.txt']) add(`dist/linux-x64/${f}`, `bin/linux-x64/${f}`);
+  for (const f of ['llm-video-engine', 'llm-video-engine-x86-64', 'llm-video-engine-x86-64-v3', 'ffmpeg', 'ffprobe', 'fonts/Montserrat-VF.ttf', 'fonts/OFL.txt']) add(`dist/linux-x64/${f}`, `bin/linux-x64/${f}`);
 } else console.warn('warning: dist/linux-x64 not found, building a plan-only skill');
 
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });

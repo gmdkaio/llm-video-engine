@@ -1,4 +1,5 @@
-# Builds the Linux x64 bundle that runs inside Claude's sandbox: the engine, a minimal static ffmpeg + ffprobe
+# Builds the Linux x64 bundle that runs inside Claude's sandbox: the engine (a baseline x86-64 build, an
+# x86-64-v3 build for AVX2 CPUs, and a launcher that picks one), a minimal static ffmpeg + ffprobe
 # (x264 only, the formats the engine uses) and the font. The artifact is unpacked into skill/bin/linux-x64
 # by tools/package_skill.mjs.
 name: linux-bundle
@@ -14,7 +15,7 @@ env:
 jobs:
   bundle:
     runs-on: ubuntu-22.04   # old glibc, so the binary runs on any current sandbox image
-    timeout-minutes: 150
+    timeout-minutes: 240   # Skia twice on a cold cache
     steps:
       - uses: actions/checkout@v4
 
@@ -33,13 +34,16 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/vcpkg
-          key: vcpkg-linux-${{ hashFiles('engine/vcpkg.json') }}
+          key: vcpkg-linux-${{ hashFiles('engine/vcpkg.json', 'engine/triplets/x64-linux-v3.cmake') }}
+          restore-keys: vcpkg-linux-
 
       - name: Engine
         working-directory: engine
         run: |
           cmake --preset linux
           cmake --build --preset linux
+          cmake --preset linux-v3
+          cmake --build --preset linux-v3
 
       - name: x264 + ffmpeg (minimal, static)
         run: |
@@ -65,11 +69,13 @@ jobs:
         run: |
           B=dist/linux-x64
           mkdir -p "$B/fonts"
-          cp engine/build/linux/llm-video-engine "$B/"
+          cp engine/build/linux/llm-video-engine "$B/llm-video-engine-x86-64"
+          cp engine/build/linux-v3/llm-video-engine "$B/llm-video-engine-x86-64-v3"
+          install -m 755 engine/scripts/linux-launcher.sh "$B/llm-video-engine"
           cp ffout/bin/ffmpeg ffout/bin/ffprobe "$B/"
           cp themes/default/Montserrat-VF.ttf themes/default/OFL.txt "$B/fonts/"
-          strip "$B/llm-video-engine" "$B/ffmpeg" "$B/ffprobe"
-          ldd "$B/llm-video-engine" || true
+          strip "$B/llm-video-engine-x86-64" "$B/llm-video-engine-x86-64-v3" "$B/ffmpeg" "$B/ffprobe"
+          ldd "$B/llm-video-engine-x86-64" || true
           ls -l "$B"
 
       - name: Smoke test in a bare Ubuntu container (no libraries, no ffmpeg)
@@ -83,9 +89,14 @@ jobs:
              "title":"Revenue grew","highlight":"12%","body":{"items":[{"type":"number","value":12,"suffix":"%"}]}}]}
           JSON
           docker run --rm -v "$PWD/dist/linux-x64:/b:ro" -v "$PWD/smoke:/w" -w /w ubuntu:22.04 bash -c '
+            set -e
             /b/llm-video-engine --version && /b/llm-video-engine validate plan.json &&
             /b/llm-video-engine grid plan.json && /b/llm-video-engine render plan.json &&
-            ls -l /w && /b/ffprobe -v error -show_entries stream=codec_name,width,height,nb_frames -of csv=p=0 /w/smoke.mp4'
+            ls -l /w && /b/ffprobe -v error -show_entries stream=codec_name,width,height,nb_frames -of csv=p=0 /w/smoke.mp4
+            # Both builds must render on their own; the runner has AVX2, so the launcher should pick v3.
+            /b/llm-video-engine --version | grep -q avx2
+            LVE_BUILD=x86-64 /b/llm-video-engine --version | grep -vq avx2
+            LVE_BUILD=x86-64 /b/llm-video-engine render plan.json --out base.mp4 && test -s base.mp4'
 
       - uses: actions/upload-artifact@v4
         with:

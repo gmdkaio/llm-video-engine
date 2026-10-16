@@ -210,7 +210,14 @@ int main(int argc, char** argv) {
         setenv("PATH", (u8(dir) + ":" + (old ? old : "")).c_str(), 1);
 #endif
     }
-    if (argc == 2 && std::string(argv[1]) == "--version") { std::cout << "llm-video-engine " LVE_VERSION "\n"; return 0; }
+    if (argc == 2 && std::string(argv[1]) == "--version") {
+#ifdef __AVX2__
+        std::cout << "llm-video-engine " LVE_VERSION " (avx2)\n";
+#else
+        std::cout << "llm-video-engine " LVE_VERSION "\n";
+#endif
+        return 0;
+    }
     if (argc < 3) {
         std::cerr << "llm-video-engine " LVE_VERSION "\n"
                   << "usage:llm-video-engine (render|grid|frame|validate) plan.json|video-plan.zip [--out path] [--at t] [--threads N] [--font f.ttf] [--null] [--shutter N]\n";

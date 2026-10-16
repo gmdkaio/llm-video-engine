@@ -164,7 +164,8 @@ ffmpeg must be on PATH to render.
 | Preset | Platform | Use |
 |---|---|---|
 | `release` | Windows, MSVC | the Windows build (load MSVC first: `. engine\scripts\dev-env.ps1`) |
-| `linux` | Linux, system compiler | portable; this is the binary bundled in the skill for Claude's sandbox |
+| `linux` | Linux, system compiler | portable; the baseline binary bundled in the skill for Claude's sandbox |
+| `linux-v3` | Linux, system compiler | `-march=x86-64-v3` (AVX2); bundled next to `linux`, and the skill runs it when the CPU supports it |
 | `linux-native` | Linux, clang | tuned for the machine it is built on (`-march=native`, Skia included); not portable |
 
 ```
@@ -186,6 +187,61 @@ the intro logo arrives oversized and dives into the cut, slide-scene camera move
 one frame and settle, and the page creeps so a held frame is never dead.
 `config.transition: "whip"` joins scenes with whip pans, and `config.clock: "twos"` holds
 every pose for two frames, for a hand-posed look. See `skill/COMPONENTS.md`.
+
+<!-- motion:start -->
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src=".github/assets/motion/words.gif" alt="Titles, word by word" width="100%"><br>
+<b>Titles, word by word</b><br>
+Each word lands whole with a short smear: a beat after the first, quick in the middle, a slower step into the last.
+</td>
+<td width="50%" valign="top">
+<img src=".github/assets/motion/land.gif" alt="Panels land, counters step" width="100%"><br>
+<b>Panels land, counters step</b><br>
+Panels arrive in about 12 frames and stop; the counter changes once per frame, in steps that shrink.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src=".github/assets/motion/dive.gif" alt="Intro: oversized logo, then a dive" width="100%"><br>
+<b>Intro: oversized logo, then a dive</b><br>
+The logo arrives too big and settles, then multiplies its scale every frame into the cut.
+</td>
+<td width="50%" valign="top">
+<img src=".github/assets/motion/exit.gif" alt="Accelerating exits" width="100%"><br>
+<b>Accelerating exits</b><br>
+Scenes leave by speeding up, at full speed on the cut, instead of easing out.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src=".github/assets/motion/snap.gif" alt="Camera snaps" width="100%"><br>
+<b>Camera snaps</b><br>
+On a captured deck tab the camera covers most of each move in one frame, then settles.
+</td>
+<td width="50%" valign="top">
+<img src=".github/assets/motion/whip.gif" alt="Whip transitions" width="100%"><br>
+<b>Whip transitions</b><br>
+<code>transition: "whip"</code>: the old scene whips out at full speed and the new one cuts in already moving.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src=".github/assets/motion/twos.gif" alt="On twos" width="100%"><br>
+<b>On twos</b><br>
+<code>clock: "twos"</code> holds every pose for two frames, for a hand-posed look.
+</td>
+<td width="50%" valign="top">
+<img src=".github/assets/motion/shutter.gif" alt="Motion blur" width="100%"><br>
+<b>Motion blur</b><br>
+<code>--shutter 8</code> averages sub-frames over a 180° shutter, so fast moves blur by their own speed.
+</td>
+</tr>
+</table>
+<!-- motion:end -->
+
+The GIFs come from `node tools/readme_motion.mjs` (25 fps, so single-frame moves survive).
 
 The eases and much of this grammar are ported from
 [motionmaxxing](https://github.com/Tejashmakwana/motionmaxxing) by Tejas Makwana

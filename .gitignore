@@ -45,3 +45,6 @@ Thumbs.db
 
 # README chart animations (tools/readme_charts.mjs)
 !/.github/assets/charts/*.gif
+
+# README motion animations (tools/readme_motion.mjs)
+!/.github/assets/motion/*.gif

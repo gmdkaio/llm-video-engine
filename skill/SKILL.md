@@ -35,7 +35,7 @@ schema/plan.schema.json          the plan contract
 scripts/analyze_deck.mjs         deck → analysis.json, inventory.md, tab_NN.png, grid.jpg, logo_N
 scripts/validate_plan.mjs        schema + `at` words + referenced files (no dependencies)
 scripts/package_plan.mjs         validates, then writes video-plan.zip
-bin/linux-x64/                   llm-video-engine, ffmpeg, ffprobe, fonts/ (self-contained, no install)
+bin/linux-x64/                   llm-video-engine (picks the build for this CPU), ffmpeg, ffprobe, fonts/ (self-contained, no install)
 ```
 Find the skill folder first (the `<skill>` below): the folder that holds this SKILL.md and `scripts/`.
 If `scripts/` or `COMPONENTS.md` is missing, the skill was installed without its files: tell the user to upload
@@ -149,7 +149,8 @@ E=<skill>/bin/linux-x64/llm-video-engine; chmod +x <skill>/bin/linux-x64/*; $E -
 Deliver the MP4(s), `video-plan.zip`, the TTS text and any deck visual that was not reproduced exactly (and why).
 The MP4 has no audio: the TTS text is for the voice-over.
 
-If `bin/linux-x64` is missing or the binary does not start (`ldd` shows what is missing), do not improvise a
+If `bin/linux-x64` is missing or the binary does not start (`ldd <skill>/bin/linux-x64/llm-video-engine-x86-64`
+shows what is missing; `LVE_BUILD=x86-64` forces the baseline build if the AVX2 one crashes), do not improvise a
 renderer: deliver `video-plan.zip` and tell the user to run `llm-video-engine render video-plan.zip` locally.
 
 ### 8. Fixes from the user
