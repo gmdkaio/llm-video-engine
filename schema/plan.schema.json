@@ -39,6 +39,9 @@
       "null"
      ]
     },
+    "progress": {
+     "type": "boolean"
+    },
     "motion": {
      "enum": [
       "classic",

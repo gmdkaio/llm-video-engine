@@ -132,6 +132,8 @@ The GIFs come from `node tools/readme_charts.mjs`.
 ```
 llm-video-engine validate video-plan.zip   # layout problems, one pasteable line each
 llm-video-engine grid video-plan.zip       # one frame per scene
+llm-video-engine grid video-plan.zip --moves   # one frame after each camera move, with a key
+llm-video-engine grid video-plan.zip --every 2 # contact sheet, one frame every 2 s
 llm-video-engine render video-plan.zip     # the MP4
 ```
 

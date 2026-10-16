@@ -28,6 +28,7 @@ Validate against `schema/plan.schema.json`. Unknown keys are rejected so typos s
   moves snap and settle. Holds are perfectly still (no page drift: it made the text shimmer). Same plan, no other field changes.
 - `transition` (measured only): `"slide"` (default) or `"whip"` (whip pans between scenes). Use whips for
   energetic, consumer-style summaries, not for a sober board report.
+- `progress`: `false` hides the progress line along the bottom (default `true`).
 - `clock`: `"smooth"` (default) or `"twos"` (every pose held two frames, a hand-animated look).
 - **Motion levels** (the skill asks the user for one; `--shutter` is a render flag, not a plan field):
 

@@ -2,6 +2,8 @@
 //
 //   llm-video-engine render plan.json [--out file.mp4] [--threads N] [--null]
 //   llm-video-engine grid   plan.json [--out grid.jpg]            one frame near the end of each scene, tiled
+//                           [--moves]   one frame just after each camera move settles, with a key on stdout
+//                           [--every S] one frame every S seconds (a contact sheet of the timeline)
 //   llm-video-engine frame  plan.json --at 12.5 [--out f.png]
 //   llm-video-engine validate plan.json                 schema-level and layout problems, one pasteable line each
 // plan.json can also be the video-plan.zip the skill produces (plan + assets); outputs go next to the zip.
@@ -15,6 +17,7 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -228,7 +231,8 @@ int main(int argc, char** argv) {
     std::string out, font = defaultFont();
     int threads = (int)std::thread::hardware_concurrency();
     float atT = -1;
-    bool null = false;
+    bool null = false, moves = false;
+    float every = 0;
     int shutter = 1, strip = 64;
     std::string encoder = "x264";
     for (int i = 3; i < argc; ++i) {
@@ -239,6 +243,8 @@ int main(int argc, char** argv) {
         else if (a == "--threads") threads = std::stoi(next());
         else if (a == "--at") atT = std::stof(next());
         else if (a == "--null") null = true;
+        else if (a == "--moves") moves = true;
+        else if (a == "--every") every = std::stof(next());
         else if (a == "--encoder") encoder = next();
         else if (a == "--shutter") shutter = std::clamp(std::stoi(next()), 1, 64);
         else if (a == "--strip") strip = std::max(0, std::stoi(next())) & ~1;  // even, for 4:2:0 chroma rows
@@ -261,6 +267,9 @@ int main(int argc, char** argv) {
         if (cmd == "validate") {
             std::vector<std::string> report = video.warnings;
             for (auto& l : checkLayout(video, fonts)) report.push_back(std::move(l));
+            // Long still holds only matter when the plan asked for motion (config.motion "measured").
+            if (plan.value("config", nlohmann::json::object()).value("motion", "classic") == "measured")
+                for (auto& l : checkStill(video, 4.f)) report.push_back(std::move(l));
             const float target = plan.value("config", nlohmann::json::object()).value("target_duration", 0.f);
             if (target > 0 && std::fabs(video.duration - target) > target * .15f)
                 report.push_back("plan \xc2\xb7 DURATION \xc2\xb7 video is " + std::to_string((int)std::lround(video.duration)) + " s, target " +
@@ -287,13 +296,28 @@ int main(int argc, char** argv) {
         }
 
         if (cmd == "grid") {
-            if (out.empty()) out = u8(outDir / fs::u8path(stem + "_grid.jpg"));
-            const int n = (int)video.B.size() - 1, cols = 3, rows = (n + cols - 1) / cols;
+            if (out.empty()) out = u8(outDir / fs::u8path(stem + (moves ? "_moves.jpg" : every > 0 ? "_sheet.jpg" : "_grid.jpg")));
+            // Times to show: scene ends (default), each camera move (--moves) or a regular step (--every).
+            std::vector<float> times;
+            if (moves) {
+                for (size_t i = 0; i < video.marks.size(); ++i) {
+                    times.push_back(std::min(video.marks[i].t, video.duration - .05f));
+                    std::cout << "tile " << i + 1 << " \xc2\xb7 " << std::fixed << std::setprecision(1) << times.back() << " s \xc2\xb7 "
+                              << video.marks[i].what << "\n";
+                }
+                if (times.empty()) { std::cout << "no camera moves in this plan\n"; return 0; }
+            } else if (every > 0) {
+                for (float t = every / 2; t < video.duration; t += every) times.push_back(t);
+            } else {
+                for (size_t k = 0; k + 1 < video.B.size(); ++k) times.push_back(std::round((video.B[k + 1] - .6f) * 100) / 100);
+            }
+            const int n = (int)times.size(), cols = every > 0 ? 5 : 3, rows = (n + cols - 1) / cols;
+            const std::string tile = every > 0 ? "scale=384:216" : "scale=640:360";
             FfmpegPipe pipe(fr.w, fr.h, timeline::kFps,
-                            {"-vf", "scale=640:360,tile=" + std::to_string(cols) + "x" + std::to_string(rows), "-frames:v", "1", "-q:v", "3", out});
+                            {"-vf", tile + ",tile=" + std::to_string(cols) + "x" + std::to_string(rows), "-frames:v", "1", "-q:v", "3", out});
             std::vector<uint8_t> px(fr.bytes());
             for (int k = 0; k < n; ++k) {
-                renderFrame(video, fonts, fr, std::round((video.B[k + 1] - .6f) * 100) / 100, px.data());
+                renderFrame(video, fonts, fr, times[k], px.data());
                 pipe.write(px.data(), px.size());
             }
             std::fill(px.begin(), px.end(), 0);

@@ -90,6 +90,8 @@ Describe each visual precisely enough to rebuild it: e.g. "bars per month, last 
 line with label, August bar hatched as projection". Read the chart's data from `inventory.md` and the HTML (SVG
 paths and chart configs hold the series); read colors from the HTML or the image.
 
+First the **one true thing**: the single sentence the viewer must remember if they forget everything else (e.g.
+"without new sales, cash falls below the minimum in November"). The hook scene says it.
 Then the **story** in 3–5 lines: what improved, what got worse, what needs a decision, what goes to the meeting.
 The scenes and their order come from the story.
 
@@ -121,8 +123,19 @@ makes fractions of the whole body hit the wrong one). Moves return by themselves
 a reset unless you want it earlier; time each move after its chart has entered.
 Add a column "camera" (where, on which word, which kind) to the table below.
 
+**One hero per frame.** Each scene has one thing the eye lands on. Two panels side by side only when one is about twice
+the other's size, or the camera moves from one to the other; otherwise split them into two scenes or drop one.
+
+**Readable when it matters.** The number the narrator names must be big on screen when it is said: a `kpi` or a
+counting `text` at hero size, or a chart label the camera brings in (a zoom of 1.8 or more on small chart text). Axis
+ticks and legends may stay small; the named number may not.
+
+**Kickers are occasional.** The small caps line above the title (`kicker`) is page furniture: use it on two or three
+scenes where the section name helps, not on every scene.
+
 Fixed structure: `intro` first when the brand logo opens the video (the greeting is its `speech`), `outro` last,
-and the agenda or next-steps scene right before `outro`.
+and the agenda or next-steps scene right before `outro`. The `outro` is short: a few words of `text` and
+`duration` 2 to 2.5 s; the video ends on it, not on a long hold.
 
 ### 5. Script (gate 2)
 Vary the rhythm: sentence lengths alternate (a short one after a long one), scenes open in different ways (with the
@@ -134,8 +147,8 @@ Write each scene's `speech` within the word budget: 60 / 90 / 120 s ≈ 130 / 19
 budget is lower than words × 2.7. Set `config.target_duration` to the chosen duration, the motion fields to the chosen level (table in `COMPONENTS.md`; level 0 sets none). Camera moves
 need a `camera` on the scene (section 4, "The camera goes where the narrator is"; a `slide` scene with `focus` also
 moves); a chart scene without one has none. Set `bleed: true` (one chart, `"panel": false`) on the scenes where the
-chart is the hero, and `header: false` on others that only need the room: the top bar is optional, not a fixture of every scene. At levels 2 and 3 give at
-least two content scenes the `slide` type with camera focus (the deck tab itself), or the camera snaps never show. Write the TTS text with numbers in words and a pause between scenes; it goes into
+chart is the hero, and `header: false` on others that only need the room: the top bar is optional, not a fixture of every scene. From level 1 on set `config.progress: false` (the progress line
+along the bottom is page chrome); at level 0 leave it. Write the TTS text with numbers in words and a pause between scenes; it goes into
 `<work>/narration.txt` (the packager refuses an empty one).
 
 ### 6. Write and validate the plan
@@ -167,20 +180,31 @@ The engine is self-contained. Once per session:
 mkdir -p /tmp/lve && tar -xJf <skill>/bin/linux-x64.tar.xz -C /tmp/lve && chmod +x /tmp/lve/llm-video-engine /tmp/lve/ffmpeg /tmp/lve/ffprobe
 E=/tmp/lve/llm-video-engine; $E --version
 ```
-1. **Layout check**, fix until it prints `plan ok` (lines are the codes in section 8):
+1. **Layout check**, fix until it prints `plan ok` (lines are the codes in section 8). From level 1 on it also reports
+   `STILL`: a scene that holds 4 s or more with nothing moving; give that moment a camera move, a `changes` highlight or
+   a pulse on a word spoken then.
    ```bash
    $E validate <work>/plan.json
    ```
 2. **Grid**: one frame per scene (`<work>/<output>_grid.jpg`). Read it, compare each scene with its deck tab, fix and
    repeat. This is the visual check; it takes seconds.
-3. **Package and hand over the plan first**, so the user sees progress before the render ends:
+3. **Camera sheet** (levels 1–3): one frame just after each camera move settles, with a key on stdout
+   (`tile 3 · 45.6 s · scene 3 spotlight on fat [...]`):
+   ```bash
+   $E grid <work>/plan.json --moves      # writes <work>/<output>_moves.jpg
+   ```
+   Read it before rendering. Every tile must show, large, the thing the narrator names at that moment: the right bars,
+   the right label, not an empty corner, a half-drawn chart or the wrong panel. A wrong tile is a wrong `target`/`box`
+   or an `at` word too early (the chart has not entered yet); fix and run it again. "camera back" tiles must show the
+   whole scene. This costs seconds and saves a full render.
+4. **Package and hand over the plan first**, so the user sees progress before the render ends:
    ```bash
    node <skill>/scripts/package_plan.mjs <work>/plan.json --narration <work>/narration.txt --out <outputs>/video-plan.zip
    ```
    Then send a short message right away: the plan is ready (scene list, estimated length, the TTS text, link to
    `video-plan.zip`) and the video is rendering now (about a minute for 90 s of video at level 0–2, about twice that
    with blur).
-4. **Render** (run it in the background and poll if the tool has a timeout):
+5. **Render** (run it in the background and poll if the tool has a timeout):
    ```bash
    $E render <work>/plan.json --out <outputs>/<name>.mp4 --threads $(nproc)      # add --shutter 6 at level 3
    ```
@@ -204,3 +228,4 @@ scenes named, validate again, render again and deliver the new MP4 and zip.
 | `TEXT_OUT` | a text runs off the frame | shorten it (titles above all) |
 | `AXIS` | a chart value is outside its `y` scale | widen `y` or remove it to let the engine choose |
 | `DURATION` | the video is more than 15% off `target_duration` | trim or extend the speech |
+| `STILL` | from level 1 on: a scene holds 4 s or more with nothing moving | a camera move, a `changes` highlight or a pulse on a word spoken then; or a shorter speech |

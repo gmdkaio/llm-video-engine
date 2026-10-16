@@ -2,6 +2,7 @@
 // of each scene, in stage coordinates, then text off the stage and text over other text.
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <string>
 
 #include "render/text.h"
@@ -67,6 +68,48 @@ void collect(const Node& n, float t, const Xf& parent, float alpha, const Fonts&
 std::string clip(const std::string& s) { return s.size() > 40 ? s.substr(0, 37) + "..." : s; }
 
 }  // namespace
+
+// Every animated value of the visible part of a subtree at t, in a fixed order (what changes between two
+// samples is motion; a hidden subtree contributes only its opacity).
+void sample(const Node& n, float t, std::vector<float>& out) {
+    const float a = val(n.opacity, t, 1);
+    out.push_back(a);
+    if (a < .001f) return;
+    for (const Track<float>* tr : {&n.tx, &n.ty, &n.scale, &n.scaleX, &n.scaleY, &n.rotation, &n.value, &n.clipWidth, &n.trim, &n.blurX, &n.blurY})
+        if (!tr->empty()) out.push_back(tr->eval(t));
+    for (const Track<Color>* tr : {&n.color, &n.strokeColor})
+        if (!tr->empty()) { const Color c = tr->eval(t); out.insert(out.end(), {c.r, c.g, c.b, c.a}); }
+    for (const auto& ch : n.children) sample(*ch, t, out);
+}
+
+std::vector<std::string> checkStill(const Video& v, float minRun) {
+    std::vector<std::string> out;
+    const float dt = .1f;
+    for (size_t k = 0; k < v.scenes.size(); ++k) {
+        // Intro and outro are brand holds: only content and slide scenes must keep moving.
+        if (v.types[k] == "intro" || v.types[k] == "outro") continue;
+        const float s0 = v.B[k], s1 = v.B[k + 1];
+        std::vector<float> prev, cur;
+        float runStart = -1;
+        auto flush = [&](float end) {
+            if (runStart < 0 || end - runStart < minRun) return;
+            char buf[160];
+            std::snprintf(buf, sizeof buf, "scene %zu \xc2\xb7 STILL \xc2\xb7 %.1f s without motion, from %.1f s into the scene", k + 1, end - runStart, runStart - s0);
+            out.push_back(buf);
+        };
+        for (float t = s0; t <= s1; t += dt) {
+            cur.clear();
+            sample(*v.scenes[k], t, cur);
+            bool same = !prev.empty() && cur.size() == prev.size();
+            for (size_t i = 0; same && i < cur.size(); ++i) same = std::fabs(cur[i] - prev[i]) < 1e-4f;
+            if (same) { if (runStart < 0) runStart = t - dt; }
+            else { flush(t - dt); runStart = -1; }
+            std::swap(prev, cur);
+        }
+        flush(s1);
+    }
+    return out;
+}
 
 std::vector<std::string> checkLayout(const Video& v, const Fonts& fonts) {
     std::vector<std::string> out;

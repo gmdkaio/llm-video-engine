@@ -32,6 +32,9 @@ struct Logos {
 
 bool isBox(const json& n) { return !n.contains("type"); }
 
+// Camera checkpoints collected while building, copied to Video::marks.
+std::vector<Video::Mark> gMarks;
+
 // Rectangle of every box or component that has an `id`, in body coordinates, for camera targets.
 std::map<std::string, Rect> gIds;
 float gOx = 0, gOy = 0;  // absolute origin (body coordinates) of the box being laid out
@@ -120,7 +123,7 @@ struct CamMove {
     float t = 0, zmax = 2.2f, hold = 3;
     Rect region;
     bool reset = false;
-    std::string kind = "snap";
+    std::string kind = "snap", what;  // what: the target id and/or box, for grid --moves
 };
 
 void cameraMoves(Kit& kit, Node* frame, Node* body, const json& cam, const json& bodySpec, float bw, float bh, float S1) {
@@ -135,6 +138,7 @@ void cameraMoves(Kit& kit, Node* frame, Node* body, const json& cam, const json&
         c.kind = m.value("kind", "snap");
         c.zmax = m.value("zoom_max", 2.2f);
         c.hold = m.value("hold", c.kind == "spotlight" ? 3.8f : 3.f);
+        c.what = m.value("target", std::string("body")) + (m.contains("box") ? " " + m["box"].dump() : "");
         if (!c.reset) {
             Rect base{0, 0, bw, bh};
             if (m.contains("target")) {
@@ -205,7 +209,12 @@ void cameraMoves(Kit& kit, Node* frame, Node* body, const json& cam, const json&
             body->ty.to(ty, t, 1.f, ease::p3InOut, 0);
             body->scale.to(z, t, 1.f, ease::p3InOut, 1);
         }
-        if (!spotlight) continue;
+        const std::string sceneName = "scene " + std::to_string(kit.k + 1) + " ";
+        if (!spotlight) {
+            gMarks.push_back({t + (kind == "zoom" ? 1.6f : motion::measured() ? .6f : 1.2f),
+                              sceneName + (c.reset ? "camera back" : kind + " on " + c.what)});
+            continue;
+        }
         // The window opens once the camera has settled.
         const float to = t + (motion::measured() ? motion::F(16) : 1.1f);
         const Rect& r = c.region;
@@ -226,6 +235,7 @@ void cameraMoves(Kit& kit, Node* frame, Node* body, const json& cam, const json&
         win->opacity.fromTo(0, 1, to, .2f, ease::p2Out);
         body->blurX.fromTo(0, 6, to, .25f, ease::p2Out);
         body->blurY.fromTo(0, 6, to, .25f, ease::p2Out);
+        gMarks.push_back({to + .5f, sceneName + "spotlight on " + c.what});
     }
     if (dim) closeSpot(std::max(S1 - .6f, all.back().t + .3f));
 }
@@ -368,6 +378,7 @@ void slideScene(Kit& kit, Node* sc, const json& c, const LoadedImage& img, float
         const bool call = fc.contains("callout");
         const float tx = kW / 2 - (bx + bw / 2) * z, ty = (call ? 330.f : 360.f) - (by + bh / 2) * z;
         const float t = T[i];
+        gMarks.push_back({t + (motion::measured() ? .6f : 1.2f), "scene " + std::to_string(kit.k + 1) + " slide focus " + std::to_string(i + 1)});
         if (motion::measured()) {
             // Reframe as a one-frame snap and a decelerating tail.
             motion::snapTo(cam->tx, tx, t, 0);
@@ -423,6 +434,7 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
                                  hexOr(tk, "blue", "#4E9CF5"));
     const json cfg = plan.value("config", json::object());
     motion::style = cfg.value("motion", "classic") == "measured" ? motion::Style::Measured : motion::Style::Classic;
+    gMarks.clear();
     const bool whips = motion::measured() && cfg.value("transition", "slide") == "whip";
     const auto& scenes = plan.at("scenes");
     const int N = (int)scenes.size();
@@ -512,9 +524,11 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
         hdr->add(text(kW - 28, baseline((46 - 10.5f * kNormalLine) / 2, 10.5f, 10.5f * kNormalLine), upper(period),
                       style(10.5f, 600, Align::Right, .12f), th.text3));
 
-    // Progress line along the bottom; bleed scenes hide it.
+    // Progress line along the bottom (config.progress, default on); bleed scenes hide it.
+    const bool progress = cfg.value("progress", true);
     Node* prog = root->add(rect(0, kH - 3, kW, 3, th.accent));
     prog->scaleX.fromTo(0, 1, 0, total, ease::linear);
+    if (!progress) prog->opacity.set(0, 0);
 
     for (int k = 0; k < N; ++k) {
         const auto& c = scenes[k];
@@ -527,6 +541,7 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
 
         Node* sc = scenesNode->add(group());
         v.scenes.push_back(sc);
+        v.types.push_back(type);
         sc->opacity.set(0, 0);
         if (motion::measured()) {
             const bool whipIn = whips && k > 0, whipOut = whips && k + 1 < N;
@@ -552,7 +567,7 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
         }
         const bool bleed = type == "content" && c.value("bleed", false);
         const bool withHeader = !bleed && c.value("header", type == "content");
-        prog->opacity.to(bleed ? 0.f : 1.f, kit.S0, .3f, ease::p1Out, 1);
+        if (progress) prog->opacity.to(bleed ? 0.f : 1.f, kit.S0, .3f, ease::p1Out, 1);
         hdr->opacity.to(withHeader ? 1.f : 0.f, kit.S0, .4f, ease::p1Out, 0);
         if (const std::string tab = c.value("tab", ""); !tab.empty()) {
             const size_t ti = std::find(tabs.begin(), tabs.end(), tab) - tabs.begin();
@@ -592,6 +607,7 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
 
     prepare(*root, fonts);
     v.B = kit.B;
+    v.marks = gMarks;
     v.twos = cfg.value("clock", "smooth") == "twos";
     v.warnings = std::move(kit.warnings);
     return v;
