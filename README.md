@@ -1,4 +1,4 @@
-# llm-video-engine [![XERJ Corpus Hub contributor](https://hub.xerj.org/contributors/gmdkaio/badge.svg)](https://hub.xerj.org/contributors/gmdkaio)
+# llm-video-engine         [![XERJ Corpus Hub contributor](https://hub.xerj.org/contributors/gmdkaio/badge.svg)](https://hub.xerj.org/contributors/gmdkaio)
 
 Turns an HTML presentation deck into a short animated video summary.
 An LLM reads the deck and writes a render plan (JSON plus assets).
