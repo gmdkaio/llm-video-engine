@@ -39,7 +39,8 @@ labels, numbers and highlighted rows.
 ```
 SKILL.md, COMPONENTS.md          this flow and the plan format
 schema/plan.schema.json          the plan contract
-scripts/analyze_deck.mjs         deck → analysis.json, inventory.md, tab_NN.png, grid.jpg, logo_N
+scripts/analyze_deck_static.mjs  deck → analysis.json, inventory.md, logo_N; reads the HTML as text, no browser (tried first)
+scripts/analyze_deck.mjs         the same plus tab_NN.png, grid.jpg and bboxes; needs Chromium (when the static result is not enough)
 scripts/validate_plan.mjs        schema + `at` words + referenced files (no dependencies)
 scripts/package_plan.mjs         validates, then writes video-plan.zip
 scripts/split_narration.py       full narration MP3 → one clip per narrated scene (cuts at the [Pause] silences)
@@ -51,9 +52,10 @@ Find the skill folder first (the `<skill>` below): the folder that holds this SK
 If `scripts/` or `COMPONENTS.md` is missing, the skill was installed without its files: tell the user to upload
 the full skill zip, and stop. If the skill folder is read-only, copy it to the scratchpad first (`cp -rL`).
 
-The analyzer needs Node and `playwright-core` with a Chromium. If `node <skill>/scripts/analyze_deck.mjs` fails on
+The browser analyzer needs Node and `playwright-core` with a Chromium. If `node <skill>/scripts/analyze_deck.mjs` fails on
 the import, run `npm install --prefix <skill> playwright-core`. It looks for Chrome, Playwright's Chromium, or any
-Chromium in the Playwright cache (set `CHROMIUM_PATH` to point at one). The other two Node scripts need only Node;
+Chromium in the Playwright cache (set `CHROMIUM_PATH` to point at one). The static analyzer needs no browser
+(step 2). The other Node scripts need only Node;
 the Python scripts need Python 3 and the system ffmpeg/ffprobe.
 
 ## Flow
@@ -78,19 +80,32 @@ Without a user (scheduled run), use the recommended options (motion classic), st
 script) and say so at the top of the delivery: voice credits are only spent after a person approves.
 
 ### 2. Analyze the deck
+Two analyzers, same outputs. Start with the static one (about 4 s, no browser, never runs the deck's code):
+```bash
+node <skill>/scripts/analyze_deck_static.mjs deck.html <work>/analysis
+```
+It prints one line per tab with a `conf=` and writes `inventory.md` (per tab: title, KPIs, charts with labels and series
+when readable, tables, cards, text; the `limits` are listed at its top) and `analysis.json`. It has no
+`tab_NN.png`, no bboxes and no `grid.jpg`.
+
+**Keep the static result only when all of this holds:** every tab is `conf=high`, the `limits` say nothing about content
+built by script, a page counter, or a one-tab result, and the user did not pick a measured motion option (which needs a
+`slide` scene with camera focus, so tab screenshots). Otherwise run the browser analyzer into the same folder; it
+overwrites the files and adds the screenshots and bboxes:
 ```bash
 node <skill>/scripts/analyze_deck.mjs deck.html <work>/analysis
 ```
-It finds how the deck navigates, visits every tab, and writes `inventory.md` (per tab: title, KPIs, charts with
-labels and series when readable, tables, cards, text), `analysis.json` (the same with bboxes, plus theme colors and
-logos), `tab_NN.png` captures and `grid.jpg`.
+It finds how the deck navigates, visits every tab, and writes the same files plus `tab_NN.png` captures and `grid.jpg`.
+With no Chromium (the import fails and `npm install` is not possible), stay with the static result: for every tab marked
+low or medium read that tab's HTML and the `script_data` entries for the numbers, plan without `slide` scenes, and say
+so in the gate-1 message.
 
 The extraction is a starting point. Hand-drawn SVG charts may come out incomplete, and overlapping tabs can leak
-items from neighbours. **Confirm every number on the tab image** (read the `tab_NN.png`) and, if needed, in the HTML
-(grep for the value; SVG tooltips often hold the exact series). Never invent a number.
+items from neighbours. **Confirm every number on the tab image** (read the `tab_NN.png`) or, with the static result, in
+the HTML (grep for the value; SVG tooltips often hold the exact series). Never invent a number.
 
 ### 3. Audit the deck
-Read `inventory.md` and **every** tab image. Build:
+Read `inventory.md` and **every** tab image (with the static analyzer there are none: read the HTML of every tab instead). Build:
 
 | Tab | Message (1 sentence) | Supporting numbers | The deck's visual: chart type, series, colors, highlight, annotations | Alert / decision |
 |---|---|---|---|---|
