@@ -53,7 +53,7 @@ Validate against `schema/plan.schema.json`. Unknown keys are rejected so typos s
 - `chip`: one chip right-aligned on the title row: `{text, tone, at}`.
 - `body`: the layout box (below). It fills the area under the title: 1224 × 534 logical px.
 
-`slide`: `image` is a `tab_NN.png` copied next to the plan. `focus: [{bbox: [x, y, w, h], callout, at}]`, with the
+`slide`: `image` is a `tab_NN.png` copied next to the plan; with `focus` it is the 3x capture (`--scale 3`, see SKILL.md step 6), or the zoom turns soft. `focus: [{bbox: [x, y, w, h], callout, at}]`, with the
 bbox in the image's pixels at 1280 px wide (the analyzer's capture size, same as `analysis.json`). The camera zooms
 on each bbox in turn (up to `zoom_max`, default 1.7), dims the rest and shows the callout. `back: true` returns to
 the full tab at the end.

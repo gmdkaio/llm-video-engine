@@ -318,9 +318,12 @@ int main(int argc, char** argv) {
             for (const auto& fmt : formats) {
                 const std::string path = !out.empty() && one ? out : u8(outDir / fs::u8path(stem + (one ? "" : " (" + fmt + ")") + ".mp4"));
                 // qsv: Intel Quick Sync on the GPU, which leaves the CPU to the renderer.
+                // LVE_QSV_QUALITY=14 raises its quality (lower is better; default 20 at 1080p, 24 at 720p).
                 // nvenc: NVIDIA's encoder, same idea on an NVIDIA GPU.
+                const char* qsvEnv = std::getenv("LVE_QSV_QUALITY");
+                const std::string qsvQuality = qsvEnv && *qsvEnv ? qsvEnv : fmt == "1080" ? "20" : "24";
                 const std::vector<std::string> enc = encoder == "qsv"
-                    ? std::vector<std::string>{"-c:v", "h264_qsv", "-preset", "medium", "-global_quality", fmt == "1080" ? "20" : "24"}
+                    ? std::vector<std::string>{"-c:v", "h264_qsv", "-preset", "medium", "-global_quality", qsvQuality}
                     : encoder == "nvenc"
                     ? std::vector<std::string>{"-c:v", "h264_nvenc", "-pix_fmt", "yuv420p", "-preset", "p5", "-rc", "vbr", "-cq", fmt == "1080" ? "20" : "24", "-b:v", "0"}
                     : std::vector<std::string>{"-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", fmt == "1080" ? "18" : "23", "-preset", "medium"};

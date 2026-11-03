@@ -19,9 +19,13 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const [deckArg, outArg] = process.argv.slice(2);
+// --scale N captures at N times the pixels (bboxes stay in 1280x720 CSS pixels); --tabs 4,7 captures only those tabs.
+const args = process.argv.slice(2);
+const opt = (name) => { const i = args.indexOf(name); return i < 0 ? null : args.splice(i, 2)[1]; };
+const scale = +(opt('--scale') || 1), only = (opt('--tabs') || '').split(',').filter(Boolean).map(Number);
+const [deckArg, outArg] = args;
 if (!deckArg || !outArg) {
-  console.error('usage: node analyze_deck.mjs deck.html out_dir');
+  console.error('usage: node analyze_deck.mjs deck.html out_dir [--scale 3] [--tabs 4,7]');
   process.exit(2);
 }
 const deck = path.resolve(deckArg), out = path.resolve(outArg);
@@ -276,7 +280,7 @@ async function launch() {
   throw new Error('no Chromium found: install Chrome, run `npx playwright install chromium`, or set CHROMIUM_PATH');
 }
 const browser = await launch();
-const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: scale });
 await page.goto('file:///' + deck.replace(/\\/g, '/'), { waitUntil: 'load' });
 await page.waitForTimeout(1800);
 
@@ -285,11 +289,13 @@ let mode;
 const capture = async (i, info) => {
   info.index = i;
   info.image = `tab_${pad(i)}.png`;
-  await page.screenshot({ path: path.join(out, info.image) });
+  const shoot = !only.length || only.includes(i);
+  if (shoot) await page.screenshot({ path: path.join(out, info.image) });
   try {
+    // boundingBox() waits up to 30 s for a missing element: scroll and hash decks have no marked slides.
     const loc = page.locator(`[data-vid-slide="${i}"]`);
-    const bb = await loc.boundingBox();
-    if (bb && bb.height > 760) {
+    const bb = (await loc.count()) ? await loc.boundingBox() : null;
+    if (shoot && bb && bb.height > 760) {
       info.image_full = `tab_${pad(i)}_full.png`;
       await loc.screenshot({ path: path.join(out, info.image_full) });
     }
@@ -297,8 +303,53 @@ const capture = async (i, info) => {
   tabs.push(info);
 };
 
-const found = await page.evaluate(FIND);
-if (found) {
+// Hash decks: one slide on a stage, navigated by `#slide-N` (arrows, a "01 / 31" counter), often drawn by JS.
+// The probe changes the hash and checks that the visible text changes and comes back; other decks are untouched.
+const HASH = '#slide-';
+// Digits are left out of the signature: counters animate, words do not.
+const sig = () => page.evaluate(() => document.body.innerText.replace(/[0-9]/g, '').replace(/\s+/g, ' ').trim());
+const setHash = async (n) => {
+  await page.evaluate((h) => { location.hash = h; }, HASH + n);
+  await page.waitForTimeout(350);
+};
+let hashCount = 0;
+{
+  const s0 = await sig();
+  await setHash(2);
+  const s2 = await sig();
+  await setHash(1);
+  if (s2 !== s0 && (await sig()) === s0) {
+    // The counter gives the count; without one, step until the deck clamps or wraps.
+    const m = (await page.evaluate(() => document.body.innerText)).match(/\b0*1\s*\/\s*(\d{1,3})\b/);
+    if (m) hashCount = +m[1];
+    else {
+      const seen = new Set([s0]);
+      for (let n = 2; n <= 80; n++) {
+        await setHash(n);
+        const s = await sig();
+        if (seen.has(s)) break;
+        seen.add(s);
+        hashCount = n;
+      }
+    }
+  }
+}
+
+const found = hashCount ? null : await page.evaluate(FIND);
+if (hashCount) {
+  mode = 'hash';
+  // Reduced motion makes most JS decks draw each slide's final state at once, so the capture needs no wait
+  // for entrance animations. Decks read it on load, hence the reload.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(1000);
+  for (let i = 0; i < hashCount; i++) {
+    await setHash(i + 1);
+    await page.waitForTimeout(300);
+    await capture(i, await page.evaluate(EXTRACT, null));
+  }
+  await setHash(1);
+} else if (found) {
   let nav = null;
   for (const f of ['go', 'show', 'goTo', 'goto', 'showSlide', 'gotoSlide', 'navigate', 'setSlide', 'irPara', 'slideTo', 'showTab']) {
     if (!(await page.evaluate((f) => typeof window[f] === 'function', f))) continue;

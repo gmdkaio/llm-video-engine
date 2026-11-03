@@ -34,9 +34,47 @@ bool isBox(const json& n) { return !n.contains("type"); }
 void layoutBox(Kit& kit, Node* parent, const json& box, Rect r) {
     const Theme& th = kit.th;
     Node* g = parent->add(group(r.x, r.y));
+    // A box enters at `at` (pop, or as a scene: slide / whip / zoom) and, with `out`, leaves the same way.
+    // zoom is the intro logo move: arrives oversized and settles, leaves diving into the cut.
+    const std::string enter = box.value("enter", "pop");
     if (box.contains("at")) {
-        g->ox = r.w / 2; g->oy = r.h / 2;
-        pop(g, kit.at(box["at"], .2f), 16, 1);
+        const float t = kit.at(box["at"], .2f);
+        if (enter == "slide") {
+            g->opacity.set(0, 0);
+            motion::Pose p;
+            p.dx = 30;
+            motion::arrive(g, t, p, 12, motion::fn(motion::softLand), 5, false);
+        } else if (enter == "whip") {
+            g->opacity.set(0, 0);
+            motion::whipIn(g, t, r.w * .45f);
+        } else if (enter == "zoom") {
+            g->ox = r.w / 2; g->oy = r.h / 2;
+            g->opacity.set(0, 0);
+            motion::Pose p;
+            p.scale = 1.86f; p.blur = 6;
+            motion::arrive(g, t, p, 20, motion::fn(motion::snapSettle), 4);
+        } else {
+            g->ox = r.w / 2; g->oy = r.h / 2;
+            pop(g, t, 16, 1);
+        }
+    }
+    if (box.contains("out")) {
+        const float t = kit.at(box["out"], 4);
+        if (enter == "whip") motion::whipOut(g, t, -r.w * .55f);
+        else if (enter == "zoom") {
+            g->ox = r.w / 2; g->oy = r.h / 2;
+            motion::dive(g, t - motion::F(9));
+            g->opacity.to(0, t - motion::F(3), motion::F(3), motion::fn(motion::cruise), 1);
+        }
+        else {
+            motion::Pose p;
+            p.dx = -30;
+            motion::depart(g, t - motion::F(13), p);
+        }
+    }
+    if (box.value("clip", false)) {
+        g->clip = true;
+        g->clipW = r.w; g->clipH = r.h;
     }
     Rect in{0, 0, r.w, r.h};
     if (box.contains("panel") && !(box["panel"].is_boolean() && !box["panel"].get<bool>())) {
@@ -115,10 +153,22 @@ void titleBlock(Kit& kit, Node* in, const json& c) {
         }
     }
     if (c.contains("title")) {
-        const TextStyle st = style(28, 700, Align::Left, -.01f);
+        const std::string t = c["title"].get<std::string>();
+        // A title wider than the body (minus the chip on its right) shrinks to fit, down to 22 px,
+        // instead of failing validate with TEXT_OUT.
+        float size = 28;
+        {
+            const TextStyle full = style(28, 700, Align::Left, -.01f);
+            std::string all = t;
+            if (c.contains("highlight")) all += " " + c["highlight"].get<std::string>();
+            float avail = kBodyW;
+            if (c.contains("chip")) avail -= kit.measure(c["chip"]["text"].get<std::string>(), style(14, 600)) + 28 + 16;
+            const float w = kit.measure(all, full);
+            if (w > avail) size = std::max(22.f, std::floor(28 * avail / w));
+        }
+        const TextStyle st = style(size, 700, Align::Left, -.01f);
         Node* h1 = in->add(group(0, 0));
         const float b = baseline(10.5f * kNormalLine + 8, 28, 28 * 1.2f);
-        const std::string t = c["title"].get<std::string>();
         if (motion::measured()) {
             // Word by word: the title in ink, then the highlight in the accent.
             std::vector<Node*> ws;
@@ -424,7 +474,7 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
 
         if (type == "intro") intro(kit, sc, c, lg);
         else if (type == "outro") outro(kit, sc, c, lg);
-        else if (type == "slide") slideScene(kit, sc, c, loadImage(asset(c.at("image").get<std::string>()), (int)std::ceil(720 * pixelScale)), S1);
+        else if (type == "slide") slideScene(kit, sc, c, loadImage(asset(c.at("image").get<std::string>()), (int)std::ceil(720 * pixelScale * c.value("zoom_max", 1.7f))), S1);
         else if (type == "content") {
             Node* in = sc->add(group(kInnerX, kInnerY));
             if (motion::measured()) {
