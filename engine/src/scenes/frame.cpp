@@ -474,7 +474,7 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
 
         if (type == "intro") intro(kit, sc, c, lg);
         else if (type == "outro") outro(kit, sc, c, lg);
-        else if (type == "slide") slideScene(kit, sc, c, loadImage(asset(c.at("image").get<std::string>()), (int)std::ceil(720 * pixelScale)), S1);
+        else if (type == "slide") slideScene(kit, sc, c, loadImage(asset(c.at("image").get<std::string>()), (int)std::ceil(720 * pixelScale * c.value("zoom_max", 1.7f))), S1);
         else if (type == "content") {
             Node* in = sc->add(group(kInnerX, kInnerY));
             if (motion::measured()) {
