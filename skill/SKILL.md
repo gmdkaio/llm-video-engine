@@ -6,10 +6,12 @@ description: "Turns an HTML presentation deck into a short narrated video summar
 # llm-video-engine: deck → narrated video
 
 Input: an HTML presentation (tabs or a long page). Output: an MP4 with the narration embedded (ElevenLabs). Along the
-way the user approves three things, in this order:
+way the user approves four things, in this order, and each one waits for the previous approval:
 
-1. **The scene plan** (gate 1) → 2. **the script + a mute preview video** (gate 2) → 3. **the voice** (gate 3, an
-AskUserQuestion), and only then ElevenLabs is called. Never spend voice credits before gate 3.
+1. **The roteiro** (gate 1: scenes + narration text) → 2. **the plan** (gate 2: `plan.json` + one frame per scene)
+→ 3. **the mute video** (gate 3) → 4. **the voice** (gate 4, an AskUserQuestion), and only then ElevenLabs is
+called. Never write the plan before gate 1, never render the video before gate 2, never spend voice credits
+before gate 4.
 
 The engine in `bin/linux-x64/` draws every frame natively (no browser, no HTML recreation) and encodes the video with
 its own ffmpeg. **Render frames only with that engine.** Never screenshot scenes, rebuild them in HTML or render video
@@ -70,7 +72,7 @@ Second call (AskUserQuestion takes at most 4 questions), the motion style. Motio
    hand-animated look).
    Describe each in one line; for a sober board report suggest classic or measured, not whip. Details in `COMPONENTS.md`.
 
-The voice is asked later, at gate 3 (step 8), never here.
+The voice is asked later, at gate 4 (step 8), never here.
 
 Without a user (scheduled run), use the recommended options (motion classic), stop after step 7 (mute preview +
 script) and say so at the top of the delivery: voice credits are only spent after a person approves.
@@ -100,7 +102,7 @@ paths and chart configs hold the series); read colors from the HTML or the image
 Then the **story** in 3–5 lines: what improved, what got worse, what needs a decision, what goes to the meeting.
 The scenes and their order come from the story.
 
-### 4. Propose the scenes (gate 1: the plan)
+### 4. Propose the scenes (first half of the roteiro)
 For each scene, the visual is:
 1. **The deck's own visual, rebuilt from marks and animated**: same chart, same numbers, same highlight. Decide
    which marks draw it (e.g. a waterfall is `bar` + `transform: "waterfall"`; a gauge is polar `arc` bands +
@@ -112,7 +114,7 @@ For each scene, the visual is:
    its type and its highlight, and say so in the table.
 
 Present a table: scene · source tab · message · numbers (value and where it came from) · **visual in the deck** ·
-**marks in the video** and what animates on which word. Ask what to cut or change. Wait for approval.
+**marks in the video** and what animates on which word. It goes to the user with the script, at gate 1 (step 5).
 
 With measured motion, the camera snaps happen on `slide` scenes with `focus` (each focus point snaps onto its bbox on
 its word, then settles). When the user picked a measured option, include at least one `slide` scene whose tab has
@@ -145,6 +147,10 @@ Example:
 [Composed, professional narration, warm but measured] What was missing was volume. [More serious, careful] Expenses rose to thirty-seven percent of revenue, well above the recent average.
 ```
 
+**Gate 1, the roteiro.** Send the scene table (step 4) and the full `narration.txt` together, with each scene's
+approximate length and the total. Ask the user to approve it or say what to change. Do not write `plan.json`
+until the roteiro is approved; a change to the roteiro gets a new roteiro, not a plan.
+
 ### 6. Write and validate the plan
 Write `<work>/plan.json` following `COMPONENTS.md`. Paths are relative to the plan: copy the logos (from the
 analysis, or the ones the user sends) next to it, e.g. `<work>/assets/`. `tab` is the label shown in the header nav
@@ -169,8 +175,7 @@ It reports schema errors, `at` regexes that match no word of the speech, referen
 `DURATION` when the estimated video is more than 15% off `target_duration` (it says how many words to cut or
 add; the estimate is the engine's own). It prints the estimated length with `plan ok`.
 
-### 7. Mute preview (gate 2: script and video)
-The engine is self-contained. Once per session:
+Then check it in the engine. It is self-contained; once per session:
 ```bash
 mkdir -p /tmp/lve && tar -xJf <skill>/bin/linux-x64.tar.xz -C /tmp/lve && chmod +x /tmp/lve/llm-video-engine /tmp/lve/ffmpeg /tmp/lve/ffprobe
 E=/tmp/lve/llm-video-engine; $E --version
@@ -179,14 +184,20 @@ E=/tmp/lve/llm-video-engine; $E --version
 2. `$E grid <work>/plan.json` (run from `<work>`): one frame per scene in `<output>_grid.jpg`. Read it, compare each
    scene with its deck tab, fix and repeat. `$E frame plan.json --at 14 --out f.jpg` shows a single instant (use it
    on a focus word's time to see where a snap lands).
-3. `$E render <work>/plan.json --out "<outputs>/<name> (mute).mp4" --threads $(nproc)` (in the background
-   if the tool has a timeout).
 
-Deliver the mute MP4 and paste the full `narration.txt` block in the message. Ask the user to approve the video
-and the text, or say what to change. Fix and re-render until both are approved.
+**Gate 2, the plan.** Send `plan.json` and the grid image, with one line per scene saying what is on screen and
+what animates when, and the engine's estimated length. Ask the user to approve it or say what to change. Do not
+render the video until the plan is approved.
 
-### 8. Voice (gate 3, one AskUserQuestion call)
-Only after gate 2 is approved, and only when the ElevenLabs connector is present (`creative_generate_speech` via
+### 7. Mute video (gate 3)
+`$E render <work>/plan.json --out "<outputs>/<name> (mute).mp4" --threads $(nproc)` (in the background if the
+tool has a timeout).
+
+Deliver the mute MP4 and paste the full `narration.txt` block in the message. Ask the user to approve the video,
+or say what to change. Fix and re-render until it is approved; a change to the spoken words goes back to gate 1.
+
+### 8. Voice (gate 4, one AskUserQuestion call)
+Only after gate 3 is approved, and only when the ElevenLabs connector is present (`creative_generate_speech` via
 ToolSearch; without it, deliver the mute MP4 + `narration.txt` and stop):
 1. **Voice** · a voice from `creative_list_voices` that fits the deck's language and tone (Recommended) · Other (the user types the name)
 2. **Generation** · Generate through the connector now (Recommended) · I'll generate on the ElevenLabs site and send the MP3
@@ -234,7 +245,7 @@ against the opening's promise, the ElevenLabs credits spent, and ask the user to
 The user may paste lines from `llm-video-engine validate`, like `scene 4 · OVERLAP · '94%' overlaps '100'` or
 `scene 2 · AT · 'faturou' matches no word of the speech`, or describe what looks wrong in the grid. Fix only the
 scenes named, validate again, render again and deliver the new MP4. A visual fix after the narration reuses the audio
-(re-run `fit_plan_to_audio.py`, render, mux); a change to the spoken words needs a new narration and a new gate 3.
+(re-run `fit_plan_to_audio.py`, render, mux); a change to the spoken words needs a new narration and a new gate 4.
 
 | Code | Meaning | Usual fix |
 |---|---|---|
