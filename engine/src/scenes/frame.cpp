@@ -153,10 +153,22 @@ void titleBlock(Kit& kit, Node* in, const json& c) {
         }
     }
     if (c.contains("title")) {
-        const TextStyle st = style(28, 700, Align::Left, -.01f);
+        const std::string t = c["title"].get<std::string>();
+        // A title wider than the body (minus the chip on its right) shrinks to fit, down to 22 px,
+        // instead of failing validate with TEXT_OUT.
+        float size = 28;
+        {
+            const TextStyle full = style(28, 700, Align::Left, -.01f);
+            std::string all = t;
+            if (c.contains("highlight")) all += " " + c["highlight"].get<std::string>();
+            float avail = kBodyW;
+            if (c.contains("chip")) avail -= kit.measure(c["chip"]["text"].get<std::string>(), style(14, 600)) + 28 + 16;
+            const float w = kit.measure(all, full);
+            if (w > avail) size = std::max(22.f, std::floor(28 * avail / w));
+        }
+        const TextStyle st = style(size, 700, Align::Left, -.01f);
         Node* h1 = in->add(group(0, 0));
         const float b = baseline(10.5f * kNormalLine + 8, 28, 28 * 1.2f);
-        const std::string t = c["title"].get<std::string>();
         if (motion::measured()) {
             // Word by word: the title in ink, then the highlight in the accent.
             std::vector<Node*> ws;
