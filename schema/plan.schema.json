@@ -528,6 +528,20 @@
     "at": {
      "$ref": "#/$defs/at"
     },
+    "enter": {
+     "enum": [
+      "pop",
+      "slide",
+      "whip",
+      "zoom"
+     ]
+    },
+    "out": {
+     "$ref": "#/$defs/at"
+    },
+    "clip": {
+     "type": "boolean"
+    },
     "items": {
      "type": "array",
      "items": {

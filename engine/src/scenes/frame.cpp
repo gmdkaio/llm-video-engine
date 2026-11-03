@@ -34,9 +34,47 @@ bool isBox(const json& n) { return !n.contains("type"); }
 void layoutBox(Kit& kit, Node* parent, const json& box, Rect r) {
     const Theme& th = kit.th;
     Node* g = parent->add(group(r.x, r.y));
+    // A box enters at `at` (pop, or as a scene: slide / whip / zoom) and, with `out`, leaves the same way.
+    // zoom is the intro logo move: arrives oversized and settles, leaves diving into the cut.
+    const std::string enter = box.value("enter", "pop");
     if (box.contains("at")) {
-        g->ox = r.w / 2; g->oy = r.h / 2;
-        pop(g, kit.at(box["at"], .2f), 16, 1);
+        const float t = kit.at(box["at"], .2f);
+        if (enter == "slide") {
+            g->opacity.set(0, 0);
+            motion::Pose p;
+            p.dx = 30;
+            motion::arrive(g, t, p, 12, motion::fn(motion::softLand), 5, false);
+        } else if (enter == "whip") {
+            g->opacity.set(0, 0);
+            motion::whipIn(g, t, r.w * .45f);
+        } else if (enter == "zoom") {
+            g->ox = r.w / 2; g->oy = r.h / 2;
+            g->opacity.set(0, 0);
+            motion::Pose p;
+            p.scale = 1.86f; p.blur = 6;
+            motion::arrive(g, t, p, 20, motion::fn(motion::snapSettle), 4);
+        } else {
+            g->ox = r.w / 2; g->oy = r.h / 2;
+            pop(g, t, 16, 1);
+        }
+    }
+    if (box.contains("out")) {
+        const float t = kit.at(box["out"], 4);
+        if (enter == "whip") motion::whipOut(g, t, -r.w * .55f);
+        else if (enter == "zoom") {
+            g->ox = r.w / 2; g->oy = r.h / 2;
+            motion::dive(g, t - motion::F(9));
+            g->opacity.to(0, t - motion::F(3), motion::F(3), motion::fn(motion::cruise), 1);
+        }
+        else {
+            motion::Pose p;
+            p.dx = -30;
+            motion::depart(g, t - motion::F(13), p);
+        }
+    }
+    if (box.value("clip", false)) {
+        g->clip = true;
+        g->clipW = r.w; g->clipH = r.h;
     }
     Rect in{0, 0, r.w, r.h};
     if (box.contains("panel") && !(box["panel"].is_boolean() && !box["panel"].get<bool>())) {
