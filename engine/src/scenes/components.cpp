@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <map>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 
 #include "scenes/kit.h"
@@ -85,6 +87,32 @@ float textHeight(const Kit& kit, const json& c, float w) {
 
 void textBlock(Kit& kit, Node* parent, const json& c, Rect r) {
     const float font = c.value("font", 14.f);
+    if (c.contains("build")) {
+        // One line built word by word with one of the title moves (motion::words).
+        static const std::map<std::string, motion::Mech> mechs = {{"rise", motion::Mech::Rise}, {"slide", motion::Mech::Slide},
+            {"pop", motion::Mech::Pop}, {"shrink", motion::Mech::Shrink}, {"focus", motion::Mech::Focus}};
+        const auto m = mechs.find(str(c, "build"));
+        if (m == mechs.end()) throw std::runtime_error("text build must be rise, slide, pop, shrink or focus");
+        std::string plain;
+        for (const auto& sp : parseRuns(c["text"].get<std::string>())) plain += sp.text;
+        const TextStyle st = style(font, 700, Align::Left, -.015f);
+        const Color col = kit.tone(c.value("tone", "text"));
+        const float b = baseline(0, font, font * 1.55f), space = kit.measure(" ", st);
+        Node* g = parent->add(group(r.x, r.y));
+        std::vector<Node*> ws;
+        float x = 0;
+        std::istringstream in(plain);
+        for (std::string w; in >> w;) {
+            const float ww = kit.measure(w, st);
+            Node* wg = g->add(group());
+            wg->add(text(x, b, w, st, col));
+            wg->ox = x + ww / 2; wg->oy = b - font * .35f;
+            ws.push_back(wg);
+            x += ww + space;
+        }
+        motion::words(ws, kit.at(field(c, "at"), 0), m->second, font * .5f);
+        return;
+    }
     Node* g = parent->add(group(r.x, r.y));
     richText(kit, g, c["text"].get<std::string>(), font, std::min(r.w, c.value("width", r.w)), kit.tone(c.value("tone", "text2")),
              kit.th.text, font * 1.55f);

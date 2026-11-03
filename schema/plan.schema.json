@@ -639,6 +639,15 @@
        },
        "width": {
         "type": "number"
+       },
+       "build": {
+        "enum": [
+         "rise",
+         "slide",
+         "pop",
+         "shrink",
+         "focus"
+        ]
        }
       }
      }
