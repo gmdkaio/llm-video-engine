@@ -19,9 +19,13 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const [deckArg, outArg] = process.argv.slice(2);
+// --scale N captures at N times the pixels (bboxes stay in 1280x720 CSS pixels); --tabs 4,7 captures only those tabs.
+const args = process.argv.slice(2);
+const opt = (name) => { const i = args.indexOf(name); return i < 0 ? null : args.splice(i, 2)[1]; };
+const scale = +(opt('--scale') || 1), only = (opt('--tabs') || '').split(',').filter(Boolean).map(Number);
+const [deckArg, outArg] = args;
 if (!deckArg || !outArg) {
-  console.error('usage: node analyze_deck.mjs deck.html out_dir');
+  console.error('usage: node analyze_deck.mjs deck.html out_dir [--scale 3] [--tabs 4,7]');
   process.exit(2);
 }
 const deck = path.resolve(deckArg), out = path.resolve(outArg);
@@ -276,7 +280,7 @@ async function launch() {
   throw new Error('no Chromium found: install Chrome, run `npx playwright install chromium`, or set CHROMIUM_PATH');
 }
 const browser = await launch();
-const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: scale });
 await page.goto('file:///' + deck.replace(/\\/g, '/'), { waitUntil: 'load' });
 await page.waitForTimeout(1800);
 
@@ -285,12 +289,13 @@ let mode;
 const capture = async (i, info) => {
   info.index = i;
   info.image = `tab_${pad(i)}.png`;
-  await page.screenshot({ path: path.join(out, info.image) });
+  const shoot = !only.length || only.includes(i);
+  if (shoot) await page.screenshot({ path: path.join(out, info.image) });
   try {
     // boundingBox() waits up to 30 s for a missing element: scroll and hash decks have no marked slides.
     const loc = page.locator(`[data-vid-slide="${i}"]`);
     const bb = (await loc.count()) ? await loc.boundingBox() : null;
-    if (bb && bb.height > 760) {
+    if (shoot && bb && bb.height > 760) {
       info.image_full = `tab_${pad(i)}_full.png`;
       await loc.screenshot({ path: path.join(out, info.image_full) });
     }

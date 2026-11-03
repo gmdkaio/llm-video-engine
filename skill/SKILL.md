@@ -171,6 +171,17 @@ Write `<work>/plan.json` following `COMPONENTS.md`. Paths are relative to the pl
 analysis, or the ones the user sends) next to it, e.g. `<work>/assets/`. `tab` is the label shown in the header nav
 ("August summary", "Cash"), never `tab_00`. Keep text on screen short: labels, not sentences.
 
+**Slide scenes with `focus`.** The camera zooms up to `zoom_max` (1.7) and the engine decodes the image at that
+resolution, so a normal 1280x720 capture turns soft when it snaps. For every `slide` scene that has `focus`, capture
+its tab at 3x and use that file as `image`:
+```bash
+node <skill>/scripts/analyze_deck.mjs deck.html <work>/hires --scale 3 --tabs 4,7
+```
+(tab numbers as in `tab_NN.png`; use a separate folder so the first analysis is not overwritten). Copy
+`<work>/hires/tab_04.png` to `<work>/assets/` and point `image` at it. The bboxes from the first analysis stay valid:
+they are in 1280x720 CSS pixels at any scale. Use the 3x files only as `image`, never read them in the audit. Without
+a browser there is no capture at all, so there is no `slide` scene with `focus`.
+
 Check by hand:
 - every number on screen is in the deck, with the same rounding
 - titles fit on one line (about 60 characters with the highlight); the outro `text` stays short ("Performance · Aug/26")
