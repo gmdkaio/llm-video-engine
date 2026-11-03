@@ -9,8 +9,8 @@ network involved.
 
 Early. The engine renders plans written in the `llm-video-engine/plan@1` format
 (`schema/plan.schema.json`, documented in `skill/COMPONENTS.md`), and the skill
-in `skill/` analyzes a deck and writes such a plan. Narration audio and vertical
-video are not built yet.
+in `skill/` analyzes a deck, writes such a plan, renders it and adds an ElevenLabs
+narration. Vertical video is not built yet.
 
 ## Charts, tables and KPIs
 
@@ -125,9 +125,15 @@ The GIFs come from `node tools/readme_charts.mjs`.
 
 ## How it is used
 
-1. The LLM, with the skill, reads the deck and returns `video-plan.zip`: the plan,
-   the logos it uses and the narration text. It never renders video.
-2. On your machine:
+With the skill, the LLM reads the deck and works in four steps, each waiting for your
+approval: the script (scenes and narration text), the plan (`plan.json` and one frame
+per scene), the mute video, and the voice. It renders with the Linux engine bundled in
+the skill, inside the LLM's sandbox, then narrates with ElevenLabs and muxes the audio.
+The deck analysis reads the HTML as text first and opens it in Chromium only when that
+falls short or a camera scene needs tab captures.
+
+The same plan renders on your machine, from a folder or from the `video-plan.zip` the
+skill hands over when asked:
 
 ```
 llm-video-engine validate video-plan.zip   # layout problems, one pasteable line each
@@ -137,7 +143,8 @@ llm-video-engine render video-plan.zip     # the MP4
 
 Render options: `--encoder qsv` (Intel Quick Sync) or `--encoder nvenc` (NVIDIA) to
 encode on the GPU, `--shutter N` for motion blur (N sub-frames per frame, 4 for drafts,
-8 for finals), `--threads N`.
+8 for finals), `--threads N`. `LVE_QSV_QUALITY` sets the Quick Sync quality (lower is
+better; the default is 20 at 1080p).
 
 On Windows the engine builds to `engine/build/release/`. Add that folder to your PATH
 once so the commands above work from anywhere (PowerShell, then open a new terminal):
@@ -152,7 +159,7 @@ On Linux, link the binary into a folder on your PATH:
 ln -s "$PWD/engine/build/linux-native/llm-video-engine" ~/.local/bin/
 ```
 
-To install the skill in Claude, build its zip with `node tools/package_skill.mjs`
+To install the skill in your LLM, build its zip with `node tools/package_skill.mjs`
 and upload `dist/llm-video-engine-skill.zip`.
 
 ## Building
@@ -164,7 +171,7 @@ ffmpeg must be on PATH to render.
 | Preset | Platform | Use |
 |---|---|---|
 | `release` | Windows, MSVC | the Windows build (load MSVC first: `. engine\scripts\dev-env.ps1`) |
-| `linux` | Linux, system compiler | portable; the baseline binary bundled in the skill for Claude's sandbox |
+| `linux` | Linux, system compiler | portable; the baseline binary bundled in the skill for the LLM's sandbox |
 | `linux-v3` | Linux, system compiler | `-march=x86-64-v3` (AVX2); bundled next to `linux`, and the skill runs it when the CPU supports it |
 | `linux-native` | Linux, clang | tuned for the machine it is built on (`-march=native`, Skia included); not portable |
 
@@ -320,7 +327,7 @@ without the engine.
 - `engine/` C++ render engine (`llm-video-engine render | grid | frame | validate`);
   `engine/src/motion/` holds the measured eases and moves
 - `schema/` JSON Schema for the plan
-- `skill/` the LLM side: deck analysis, plan format, plan validator
+- `skill/` the LLM side: deck analysis, plan format, plan validator, narration scripts
 - `themes/default/` default font (Montserrat, OFL)
 - `examples/` example plans, fictitious data only
 - `tools/` helper scripts (`package_skill.mjs` builds the skill zip)
