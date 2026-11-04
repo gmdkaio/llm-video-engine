@@ -34,6 +34,8 @@ Validate against `schema/plan.schema.json`. Unknown keys are rejected so typos s
 - `logos`: paths relative to the plan. SVG or PNG. `brand` is the full lockup (intro, outro); `brand_mark` the
   small mark for the header (defaults to `brand`). `client_color` recolors every fill of an SVG. `brand_reveal`
   (0–1): the intro first shows only this left fraction of the brand logo (its symbol), then reveals the rest.
+- `header`: the top bar over content scenes (logos, the `tab` labels as a nav, `period` on the right). Add it only
+  when the deck itself has a top bar or tab nav; without `header` no scene shows one.
 - **Tones**, used everywhere a color goes: `accent`, `accent_dim`, `good`, `bad`, `warn`, `blue`, `neutral`,
   `neutral2`, `text`, `text2`, `text3`, `line`, `grid`, `panel`, `bg`, or any `#rrggbb` from the deck
   (e.g. the third shade of a stacked chart).

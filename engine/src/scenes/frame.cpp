@@ -462,7 +462,8 @@ Video buildVideo(const json& plan, const Fonts& fonts, const std::string& baseDi
                 sc->tx.to(-30, S1 - .45f, .45f, ease::p2In, 0);
             }
         }
-        const bool withHeader = type == "content" || (type == "slide" && c.value("header", false));
+        // The top bar (logos, tab nav, period) is drawn only when the plan has a `header`, i.e. the deck has one.
+        const bool withHeader = plan.contains("header") && (type == "content" || (type == "slide" && c.value("header", false)));
         hdr->opacity.to(withHeader ? 1.f : 0.f, kit.S0, .4f, ease::p1Out, 0);
         if (const std::string tab = c.value("tab", ""); !tab.empty()) {
             const size_t ti = std::find(tabs.begin(), tabs.end(), tab) - tabs.begin();

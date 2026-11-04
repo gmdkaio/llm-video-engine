@@ -168,7 +168,8 @@ until the roteiro is approved; a change to the roteiro gets a new roteiro, not a
 
 ### 6. Write and validate the plan
 Write `<work>/plan.json` following `COMPONENTS.md`. Paths are relative to the plan: copy the logos (from the
-analysis, or the ones the user sends) next to it, e.g. `<work>/assets/`. `tab` is the label shown in the header nav
+analysis, or the ones the user sends) next to it, e.g. `<work>/assets/`. `header` (the top bar with the tab nav) goes in
+only when the deck has a top bar or tab nav of its own; then `tab` is the label shown in it
 ("August summary", "Cash"), never `tab_00`. Keep text on screen short: labels, not sentences.
 
 **Slide scenes with `focus`.** The camera zooms up to `zoom_max` (1.7) and the engine decodes the image at that
